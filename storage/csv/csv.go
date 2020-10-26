@@ -4,38 +4,37 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
-	"github.com/goex-top/market_center"
-	jsoniter "github.com/json-iterator/go"
-	"github.com/nntaoli-project/goex"
 	"log"
 	"os"
 	"time"
+
+	"github.com/goex-top/market_center"
+	jsoniter "github.com/json-iterator/go"
+   "github.com/520lly/qt_data_service/utils"
+   "github.com/520lly/qt_data_service/models"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type CsvStorage struct {
+   market         string
 	exchangeName   string
 	pair           string
 	contractType   string
 	flag           market_center.DataFlag
 	prefix         string
 	outputPath     string
-	saveDepthChan  chan goex.Depth
-	saveTickerChan chan goex.Ticker
-	saveKlineChan  chan goex.Kline
+   fullPath       string
+   saveStockBasic chan models.StockBasic 
 	fileTimestamp  time.Time
 	ctx            context.Context
-	depthFile      *os.File
-	tickerFile     *os.File
-	klineFile      *os.File
-	depthCsv       *csv.Writer
-	tickerCsv      *csv.Writer
-	klineCsv       *csv.Writer
+	basicFile      *os.File
+	basicCsv       *csv.Writer
 }
 
 func NewCsvStorage(
 	ctx context.Context,
+   market         string,
 	exchangeName string,
 	pair string,
 	contractType string,
@@ -43,109 +42,59 @@ func NewCsvStorage(
 	prefix string,
 	outputPath string,
 ) *CsvStorage {
-	var saveDepthChan chan goex.Depth
-	var saveTickerChan chan goex.Ticker
-	var saveKlineChan chan goex.Kline
-	var depthFile *os.File
-	var tickerFile *os.File
-	var klineFile *os.File
-	var depthCsv *csv.Writer
-	var tickerCsv *csv.Writer
-	var klineCsv *csv.Writer
+	var saveStockBasic chan models.StockBasic
+	var basicFile *os.File
+	var basicCsv *csv.Writer
 
 	fileTimestamp := time.Now()
 	ts := fileTimestamp.Format("2006-01-02")
 	isNew := false
 
-	if flag&market_center.DataFlag_Depth != 0 {
-		isNew, depthFile = OpenCsvFile(fmt.Sprintf("%s/depth_%s_%s_%s%s.csv", prefix, exchangeName, pair, contractType, ts))
-		depthCsv = csv.NewWriter(depthFile)
-		if isNew {
-			data := []string{"t", "a", "b"}
-			depthCsv.Write(data)
-			depthCsv.Flush()
-		}
-		saveDepthChan = make(chan goex.Depth)
-	}
+   path := prefix + "/" + outputPath + "/" + exchangeName + "/" + market
+   ret, _ := utils.EnsurePathExist(path)
+   if ret == false {
+      panic("path was not exist!")
+   }
+   log.Println("%s exist!", path)
 
-	if flag&market_center.DataFlag_Ticker != 0 {
-		isNew, tickerFile = OpenCsvFile(fmt.Sprintf("%s/ticker_%s_%s_%s%s.csv", prefix, exchangeName, pair, contractType, ts))
-		tickerCsv = csv.NewWriter(tickerFile)
-		if isNew {
-			data := []string{"t", "b", "s", "h", "l", "v"}
-			tickerCsv.Write(data)
-			tickerCsv.Flush()
-		}
-		saveTickerChan = make(chan goex.Ticker)
-	}
-
-	if flag&market_center.DataFlag_Kline != 0 {
-		isNew, klineFile = OpenCsvFile(fmt.Sprintf("%s/depth_%s_%s_%s%s.csv", prefix, exchangeName, pair, contractType, ts))
-		klineCsv = csv.NewWriter(klineFile)
-		if isNew {
-			data := []string{"t", "o", "h", "l", "c", "v"}
-			klineCsv.Write(data)
-			klineCsv.Flush()
-		}
-		saveKlineChan = make(chan goex.Kline)
-	}
+   isNew, basicFile = OpenCsvFile(fmt.Sprintf("%s/basic_%s.csv", path,ts))
+   basicCsv = csv.NewWriter(basicFile)
+   if isNew {
+      data := models.FieldSymbol
+      basicCsv.Write(data)
+      basicCsv.Flush()
+   }
+   saveStockBasic = make(chan models.StockBasic)
 
 	return &CsvStorage{
 		ctx:            ctx,
+      market:         market,
 		exchangeName:   exchangeName,
 		pair:           pair,
 		contractType:   contractType,
 		flag:           flag,
 		prefix:         prefix,
 		outputPath:     outputPath,
-		saveDepthChan:  saveDepthChan,
-		saveTickerChan: saveTickerChan,
-		saveKlineChan:  saveKlineChan,
+      fullPath:       path,
 		fileTimestamp:  fileTimestamp,
-		depthFile:      depthFile,
-		tickerFile:     tickerFile,
-		klineFile:      klineFile,
-		depthCsv:       depthCsv,
-		tickerCsv:      tickerCsv,
-		klineCsv:       klineCsv,
+      saveStockBasic: saveStockBasic,
+		basicFile:      basicFile,
+		basicCsv:       basicCsv,
 	}
 }
 
-func (s *CsvStorage) SaveDepth(depth *goex.Depth) {
-	if s.saveDepthChan == nil {
+//func (s *CsvStorage) SaveStockBasic(sb *models.StockBasic) {
+func (s *CsvStorage) SaveStockBasic(sb *[]string) {
+	if s.saveStockBasic == nil {
 		return
 	}
-	s.saveDepthChan <- *depth
-}
-
-func (s *CsvStorage) SaveTicker(ticker *goex.Ticker) {
-	if s.saveTickerChan == nil {
-		return
-	}
-
-	s.saveTickerChan <- *ticker
-}
-
-func (s *CsvStorage) SaveKline(kline *goex.Kline) {
-	if s.saveKlineChan == nil {
-		return
-	}
-
-	s.saveKlineChan <- *kline
+	s.saveStockBasic <- *sb
 }
 
 func (s *CsvStorage) Close() {
-	if s.depthCsv != nil {
-		s.depthCsv.Flush()
-		s.depthFile.Close()
-	}
-	if s.tickerCsv != nil {
-		s.tickerCsv.Flush()
-		s.tickerFile.Close()
-	}
-	if s.klineCsv != nil {
-		s.klineCsv.Flush()
-		s.klineFile.Close()
+	if s.basicCsv != nil {
+		s.basicCsv.Flush()
+		s.basicFile.Close()
 	}
 	//close(s.saveDepthChan)
 	//close(s.saveTickerChan)
@@ -187,37 +136,15 @@ func (s *CsvStorage) reNewFile() {
 	s.fileTimestamp = now
 
 	ts := s.fileTimestamp.Format("2006-01-02")
-	isNew := false
+   isNew := false
 
-	if s.flag&market_center.DataFlag_Depth != 0 {
-		isNew, s.depthFile = OpenCsvFile(fmt.Sprintf("%s/depth_%s_%s_%s%s.csv", s.prefix, s.exchangeName, s.pair, s.contractType, ts))
-		s.depthCsv = csv.NewWriter(s.depthFile)
-		if isNew {
-			data := []string{"t", "a", "b"}
-			s.depthCsv.Write(data)
-			s.depthCsv.Flush()
-		}
-	}
-
-	if s.flag&market_center.DataFlag_Ticker != 0 {
-		isNew, s.tickerFile = OpenCsvFile(fmt.Sprintf("%s/ticker_%s_%s_%s%s.csv", s.prefix, s.exchangeName, s.pair, s.contractType, ts))
-		s.tickerCsv = csv.NewWriter(s.tickerFile)
-		if isNew {
-			data := []string{"t", "b", "s", "h", "l", "v"}
-			s.tickerCsv.Write(data)
-			s.tickerCsv.Flush()
-		}
-	}
-
-	if s.flag&market_center.DataFlag_Kline != 0 {
-		isNew, s.klineFile = OpenCsvFile(fmt.Sprintf("%s/depth_%s_%s_%s%s.csv", s.prefix, s.exchangeName, s.pair, s.contractType, ts))
-		s.klineCsv = csv.NewWriter(s.klineFile)
-		if isNew {
-			data := []string{"t", "o", "h", "l", "c", "v"}
-			s.klineCsv.Write(data)
-			s.klineCsv.Flush()
-		}
-	}
+   isNew, s.basicFile = OpenCsvFile(fmt.Sprintf("%s/basic_%s.csv", s.fullPath,ts))
+   s.basicCsv = csv.NewWriter(s.basicFile)
+   if isNew {
+      data := models.FieldSymbol
+      s.basicCsv.Write(data)
+      s.basicCsv.Flush()
+   }
 }
 
 func (s *CsvStorage) SaveWorker() {
@@ -228,56 +155,22 @@ func (s *CsvStorage) SaveWorker() {
 		select {
 		case <-tick.C:
 			s.reNewFile()
-		case o := <-s.saveDepthChan:
-			asks := make([][]float64, 0)
-			bids := make([][]float64, 0)
-			for _, v := range o.AskList {
-				ask := make([]float64, 0)
-				ask = append(ask, v.Price, v.Amount)
-				asks = append(asks, ask)
-			}
-			a, _ := json.Marshal(asks)
-
-			for _, v := range o.BidList {
-				bid := make([]float64, 0)
-				bid = append(bid, v.Price, v.Amount)
-				bids = append(bids, bid)
-			}
-			b, _ := json.Marshal(bids)
-
+		case o := <-s.saveStockBasic:
 			data := []string{
-				fmt.Sprint(o.UTime.UnixNano() / int64(time.Millisecond)),
-				string(a),
-				string(b),
-			}
-
-			s.depthCsv.Write(data)
-			s.depthCsv.Flush()
-
-		case o := <-s.saveTickerChan:
-			data := []string{
-				fmt.Sprint(o.Date),
-				fmt.Sprint(o.Buy),
-				fmt.Sprint(o.Sell),
-				fmt.Sprint(o.High),
-				fmt.Sprint(o.Low),
-				fmt.Sprint(o.Vol),
-			}
-			s.tickerCsv.Write(data)
-			s.tickerCsv.Flush()
-
-		case o := <-s.saveKlineChan:
-			data := []string{
-				fmt.Sprint(o.Timestamp),
-				fmt.Sprint(o.Open),
-				fmt.Sprint(o.High),
-				fmt.Sprint(o.Low),
-				fmt.Sprint(o.Close),
-				fmt.Sprint(o.Vol),
-			}
-
-			s.klineCsv.Write(data)
-			s.klineCsv.Flush()
+				fmt.Sprint(o.TsCode),
+				fmt.Sprint(o.Symbol),
+				fmt.Sprint(o.Name ),
+				fmt.Sprint(o.Area),
+				fmt.Sprint(o.Industry),
+				fmt.Sprint(o.Market),
+				fmt.Sprint(o.Exchange),
+				fmt.Sprint(o.CurrType),
+				fmt.Sprint(o.ListStatus),
+				fmt.Sprint(o.ListDate),
+				fmt.Sprint(o.DelistDate),
+				fmt.Sprint(o.IsHs)}
+			s.basicCsv.Write(data)
+			s.basicCsv.Flush()
 
 		case <-s.ctx.Done():
 			s.Close()

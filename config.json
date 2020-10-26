@@ -4,30 +4,12 @@
       "market": "stock",
       "exchange_name": "sh",
       "currency_pair": "yuan"
-    },
-    {
-      "market": "stock",
-      "exchange_name": "sz",
-      "currency_pair": "yuan"
-    },
-    {
-      "exchange_name": "Binance",
-      "currency_pair": "BTC_USDT",
-      "period": 100,
-      "flag": 3
-    },
-    {
-      "exchange_name": "Swap_Binance",
-      "currency_pair": "BTC_USDT",
-      "contract_type": "swap",
-      "period": 100,
-      "flag": 3
     }
   ],
   "store": {
     "csv": true,
     "csv_cfg": {
-      "location": "~/data"
+      "location": "qt_data"
     },
     "influx_db": false,
     "influx_db_cfg": {

@@ -14,7 +14,7 @@ type Subscribe struct {
 type Storage struct {
 	Csv         bool `json:"csv" yaml:"csv" `
 	CsvCfg struct {
-		location string `json:"location" yaml:"location" default:"~/data"`
+		Location string `json:"location" yaml:"location" default:"qt_data"`
 	} `json:"csv_cfg" yaml:"csv_cfg"`
 	InfluxDB    bool `json:"influx_db" yaml:"influx_db" `
 	InfluxDbCfg struct {
@@ -31,7 +31,7 @@ type Tokens struct {
 type Config struct {
 	Subs             []Subscribe `json:"subs" yaml:"subs" default:"subs"`
    Store            Storage     `json:"store" yaml:"store" default:""`
-   Tks              Tokens      `json:"tokens" yaml:"tokens" default:""`
+   Tokens           Tokens      `json:"tokens" yaml:"tokens" default:""`
 	WithMarketCenter bool        `json:"with_market_center" yaml:"with_market_center" `
 	MarketCenterPath string      `json:"market_center_path" yaml:"market_center_path" default:"/tmp/goex.market.center"`
 }

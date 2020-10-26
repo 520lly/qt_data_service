@@ -1,11 +1,9 @@
 package storage
 
-import "github.com/nntaoli-project/goex"
+//import "github.com/520lly/qt_data_service/models"
 
 type Storage interface {
-	SaveDepth(depth *goex.Depth)
-	SaveTicker(ticker *goex.Ticker)
-	SaveKline(kline *goex.Kline)
+	SaveStockBasic(sb *[]string)
 	SaveWorker()
 	Close()
 }

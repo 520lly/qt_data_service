@@ -8,10 +8,17 @@ import(
 	"os"
 
    "github.com/520lly/qt_data_service/clients"
+   //"github.com/520lly/qt_data_service/models"
 	"github.com/520lly/qt_data_service/config"
-	"github.com/520lly/qt_data_service/storage"
+   "github.com/520lly/qt_data_service/storage"
+   "github.com/520lly/qt_data_service/collector"
 	"github.com/520lly/qt_data_service/storage/csv"
 	"github.com/520lly/qt_data_service/storage/influxdb"
+	"github.com/jinzhu/configor"
+
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 var (
@@ -52,13 +59,19 @@ func main() {
 	for _, v := range cfg.Subs {
 		var sto storage.Storage
 		if cfg.Store.Csv {
-			sto = csv.NewCsvStorage(ctx, v.ExchangeName, v.CurrencyPair, v.ContractType, v.Flag, "output/csv", "output/tar")
+         home := os.Getenv("HOME")
+			sto = csv.NewCsvStorage(ctx, v.ExchangeName, v.Market, v.CurrencyPair, v.ContractType, v.Flag, home, cfg.Store.CsvCfg.Location)
 		}
 		if cfg.Store.InfluxDB {
 			sto = influxdb.NewInfluxdb(ctx, v.ExchangeName, v.CurrencyPair, v.ContractType, cfg.Store.InfluxDbCfg.Url, cfg.Store.InfluxDbCfg.Database, cfg.Store.InfluxDbCfg.Username, cfg.Store.InfluxDbCfg.Password)
 		}
 		go sto.SaveWorker()
-		cl := &client.McClient{}
+      cl := &clients.TsClient{}
+      cl = clients.NewTsClient(v.Market, v.ExchangeName, v.CurrencyPair, cfg.Tokens.TuShare)
+      collector.NewTsCollector(ctx, cl, 10, sto)
+      //collector.ts_collector.NewTsCollector(ctx, cl, 10, sto)
+      // TODO Initializing collector worker
+
    }
 
 	exitSignal := make(chan os.Signal, 1)
@@ -67,5 +80,5 @@ func main() {
 	<-exitSignal
 	cancel()
 	time.Sleep(time.Second)
-	log.Println("market data collector exit")
+	log.Println("quantitative data collector exit")
 }
