@@ -4,7 +4,10 @@ package storage
 
 type Storage interface {
 	SaveStockBasic(items *[][]interface{})
-   SaveCompanyBasic(items *[][]interface{})
+	SaveCompanyBasic(items *[][]interface{})
+	GetFullPath() string
+	GetStockBasic() string
+	GetCompanyBasic() string
 	SaveWorker()
 	Close()
 }

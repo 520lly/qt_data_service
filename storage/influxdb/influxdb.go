@@ -1,207 +1,217 @@
 package influxdb
 
 import (
-    "context"
-    "fmt"
-    _ "github.com/influxdata/influxdb1-client" // this is important because of the bug in go mod
-    client "github.com/influxdata/influxdb1-client/v2"
-    "github.com/nntaoli-project/goex"
-   //"github.com/520lly/qt_data_service/models"
-    "log"
-    "strings"
-    "time"
+	"context"
+	"fmt"
+	_ "github.com/influxdata/influxdb1-client" // this is important because of the bug in go mod
+	client "github.com/influxdata/influxdb1-client/v2"
+	"github.com/nntaoli-project/goex"
+	//"github.com/520lly/qt_data_service/models"
+	"log"
+	"strings"
+	"time"
 )
 
 type InfluxdbStorage struct {
-    ctx            context.Context
-    exchangeName   string
-    pair           string
-    contractType   string
-    tag            map[string]string
-    Url            string
-    DatabaseName   string
-    Username       string
-    Password       string
-    cli            client.Client
-    saveDepthChan  chan goex.Depth
-    saveTickerChan chan goex.Ticker
-    saveKlineChan  chan goex.Kline
+	ctx            context.Context
+	exchangeName   string
+	pair           string
+	contractType   string
+	tag            map[string]string
+	Url            string
+	DatabaseName   string
+	Username       string
+	Password       string
+	cli            client.Client
+	saveDepthChan  chan goex.Depth
+	saveTickerChan chan goex.Ticker
+	saveKlineChan  chan goex.Kline
 }
 
 func NewInfluxdb(ctx context.Context,
-    exchangeName string,
-    pair string,
-    contractType string,
-    url,
-    databaseName,
-    username,
-    password string,
+	exchangeName string,
+	pair string,
+	contractType string,
+	url,
+	databaseName,
+	username,
+	password string,
 ) *InfluxdbStorage {
-    s := &InfluxdbStorage{
-        ctx:          ctx,
-        Username:     username,
-        Password:     password,
-        Url:          url,
-        DatabaseName: databaseName,
-        exchangeName: exchangeName,
-        pair:         pair,
-        contractType: contractType,
-    }
-    cli, err := client.NewHTTPClient(client.HTTPConfig{
-        Addr:     url,
-        Username: username,
-        Password: password,
-    })
-    if err != nil {
-        log.Fatal(err)
-    }
-    s.tag = make(map[string]string)
-    if strings.Contains(exchangeName, "Future") {
-        s.tag[exchangeName+"_"+contractType] = pair
-    } else if strings.Contains(exchangeName, "Swap") {
-        s.tag[exchangeName+"_"+contractType] = pair
-    } else {
-        s.tag[exchangeName+"_spot"] = pair
-    }
-    s.cli = cli
-    s.saveTickerChan = make(chan goex.Ticker)
-    s.saveDepthChan = make(chan goex.Depth)
-    s.saveKlineChan = make(chan goex.Kline)
-    return s
+	s := &InfluxdbStorage{
+		ctx:          ctx,
+		Username:     username,
+		Password:     password,
+		Url:          url,
+		DatabaseName: databaseName,
+		exchangeName: exchangeName,
+		pair:         pair,
+		contractType: contractType,
+	}
+	cli, err := client.NewHTTPClient(client.HTTPConfig{
+		Addr:     url,
+		Username: username,
+		Password: password,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	s.tag = make(map[string]string)
+	if strings.Contains(exchangeName, "Future") {
+		s.tag[exchangeName+"_"+contractType] = pair
+	} else if strings.Contains(exchangeName, "Swap") {
+		s.tag[exchangeName+"_"+contractType] = pair
+	} else {
+		s.tag[exchangeName+"_spot"] = pair
+	}
+	s.cli = cli
+	s.saveTickerChan = make(chan goex.Ticker)
+	s.saveDepthChan = make(chan goex.Depth)
+	s.saveKlineChan = make(chan goex.Kline)
+	return s
 }
 
 func (s *InfluxdbStorage) SaveStockBasic(items *[][]interface{}) {
 }
 
-func (s *InfluxdbStorage) SaveCompanyBasic(items *[][]interface{}){
+func (s *InfluxdbStorage) SaveCompanyBasic(items *[][]interface{}) {
+}
+
+func (s *InfluxdbStorage) GetFullPath() string {
+	return ""
+}
+func (s *InfluxdbStorage) GetStockBasic() string {
+	return ""
+}
+func (s *InfluxdbStorage) GetCompanyBasic() string {
+	return ""
 }
 
 func (s *InfluxdbStorage) SaveDepth(depth *goex.Depth) {
-    if s.saveDepthChan == nil {
-        return
-    }
-    s.saveDepthChan <- *depth
+	if s.saveDepthChan == nil {
+		return
+	}
+	s.saveDepthChan <- *depth
 }
 
 func (s *InfluxdbStorage) SaveTicker(ticker *goex.Ticker) {
-    if s.saveTickerChan == nil {
-        return
-    }
+	if s.saveTickerChan == nil {
+		return
+	}
 
-    s.saveTickerChan <- *ticker
+	s.saveTickerChan <- *ticker
 }
 
 func (s *InfluxdbStorage) SaveKline(kline *goex.Kline) {
-    if s.saveKlineChan == nil {
-        return
-    }
+	if s.saveKlineChan == nil {
+		return
+	}
 
-    s.saveKlineChan <- *kline
+	s.saveKlineChan <- *kline
 }
 
 func (s *InfluxdbStorage) Close() {
-    //close(s.saveDepthChan)
-    //close(s.saveTickerChan)
-    //close(s.saveKlineChan)
-    s.cli.Close()
+	//close(s.saveDepthChan)
+	//close(s.saveTickerChan)
+	//close(s.saveKlineChan)
+	s.cli.Close()
 }
 
 func (s *InfluxdbStorage) SaveWorker() {
-    /*
-        |MEASUREMENT | TAGS | FIELDS|
-        |  ----  | ----  | ----  |
-        |ticker  | exchangeName_spot=pair    | xxx|
-        |kline  | exchangeName_future_contractType=pair  | xxx|
-        |depth  | exchangeName_swap=pair    | xxx |
-    */
+	/*
+	   |MEASUREMENT | TAGS | FIELDS|
+	   |  ----  | ----  | ----  |
+	   |ticker  | exchangeName_spot=pair    | xxx|
+	   |kline  | exchangeName_future_contractType=pair  | xxx|
+	   |depth  | exchangeName_swap=pair    | xxx |
+	*/
 
-    for {
-        select {
-        case o := <-s.saveDepthChan:
-            fields := make(map[string]interface{})
-            fields["ts"] = o.UTime.UnixNano() / int64(time.Millisecond) //unit ms
-            for k, v := range o.AskList {
-                fields[fmt.Sprintf("ask%d_price", k)] = v.Price
-                fields[fmt.Sprintf("ask%d_amount", k)] = v.Amount
-            }
-            for k, v := range o.BidList {
-                fields[fmt.Sprintf("bid%d_price", k)] = v.Price
-                fields[fmt.Sprintf("bid%d_amount", k)] = v.Amount
-            }
-            s.WritesPoints("depth", s.tag, fields)
-        case o := <-s.saveTickerChan:
-            fields := make(map[string]interface{})
-            fields["ts"] = int64(o.Date)
-            fields["last"] = o.Last
-            fields["buy"] = o.Buy
-            fields["sell"] = o.Sell
-            fields["vol"] = o.Vol
-            fields["high"] = o.High
-            fields["low"] = o.Low
+	for {
+		select {
+		case o := <-s.saveDepthChan:
+			fields := make(map[string]interface{})
+			fields["ts"] = o.UTime.UnixNano() / int64(time.Millisecond) //unit ms
+			for k, v := range o.AskList {
+				fields[fmt.Sprintf("ask%d_price", k)] = v.Price
+				fields[fmt.Sprintf("ask%d_amount", k)] = v.Amount
+			}
+			for k, v := range o.BidList {
+				fields[fmt.Sprintf("bid%d_price", k)] = v.Price
+				fields[fmt.Sprintf("bid%d_amount", k)] = v.Amount
+			}
+			s.WritesPoints("depth", s.tag, fields)
+		case o := <-s.saveTickerChan:
+			fields := make(map[string]interface{})
+			fields["ts"] = int64(o.Date)
+			fields["last"] = o.Last
+			fields["buy"] = o.Buy
+			fields["sell"] = o.Sell
+			fields["vol"] = o.Vol
+			fields["high"] = o.High
+			fields["low"] = o.Low
 
-            s.WritesPoints("ticker", s.tag, fields)
+			s.WritesPoints("ticker", s.tag, fields)
 
-        case o := <-s.saveKlineChan:
-            fields := make(map[string]interface{})
-            fields["ts"] = o.Timestamp
-            fields["open"] = o.Open
-            fields["high"] = o.High
-            fields["low"] = o.Low
-            fields["close"] = o.Close
-            fields["vol"] = o.Vol
-            s.WritesPoints("kline", s.tag, fields)
+		case o := <-s.saveKlineChan:
+			fields := make(map[string]interface{})
+			fields["ts"] = o.Timestamp
+			fields["open"] = o.Open
+			fields["high"] = o.High
+			fields["low"] = o.Low
+			fields["close"] = o.Close
+			fields["vol"] = o.Vol
+			s.WritesPoints("kline", s.tag, fields)
 
-        case <-s.ctx.Done():
-            s.Close()
-            log.Printf("(%s) %s saveWorker exit\n", s.exchangeName, s.pair)
-            return
-        }
-    }
+		case <-s.ctx.Done():
+			s.Close()
+			log.Printf("(%s) %s saveWorker exit\n", s.exchangeName, s.pair)
+			return
+		}
+	}
 }
 
 //Insert
 func (s *InfluxdbStorage) WritesPoints(table string, tags map[string]string, fields map[string]interface{}) {
-    bp, err := client.NewBatchPoints(client.BatchPointsConfig{
-        Database:  s.DatabaseName,
-        Precision: "ms",
-    })
+	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
+		Database:  s.DatabaseName,
+		Precision: "ms",
+	})
 
-    if err != nil {
-        log.Println(s.exchangeName, s.pair, s.contractType, "Influxdb NewBatchPoints err:", err)
-        return
-    }
+	if err != nil {
+		log.Println(s.exchangeName, s.pair, s.contractType, "Influxdb NewBatchPoints err:", err)
+		return
+	}
 
-    pt, err := client.NewPoint(
-        table,
-        tags,
-        fields,
-        time.Now(),
-    )
-    if err != nil {
-        log.Println(s.exchangeName, s.pair, s.contractType, "Influxdb NewPoint err:", err)
-        return
-    }
-    bp.AddPoint(pt)
+	pt, err := client.NewPoint(
+		table,
+		tags,
+		fields,
+		time.Now(),
+	)
+	if err != nil {
+		log.Println(s.exchangeName, s.pair, s.contractType, "Influxdb NewPoint err:", err)
+		return
+	}
+	bp.AddPoint(pt)
 
-    if err := s.cli.Write(bp); err != nil {
-        log.Println(s.exchangeName, s.pair, s.contractType, "Influxdb Write err:", err)
-        return
-    }
+	if err := s.cli.Write(bp); err != nil {
+		log.Println(s.exchangeName, s.pair, s.contractType, "Influxdb Write err:", err)
+		return
+	}
 }
 
 //query
 func (s *InfluxdbStorage) QueryDB(cli client.Client, cmd string) (res []client.Result, err error) {
-    q := client.Query{
-        Command:  cmd,
-        Database: s.DatabaseName,
-    }
-    if response, err := cli.Query(q); err == nil {
-        if response.Error() != nil {
-            return res, response.Error()
-        }
-        res = response.Results
-    } else {
-        return res, err
-    }
-    return res, nil
+	q := client.Query{
+		Command:  cmd,
+		Database: s.DatabaseName,
+	}
+	if response, err := cli.Query(q); err == nil {
+		if response.Error() != nil {
+			return res, response.Error()
+		}
+		res = response.Results
+	} else {
+		return res, err
+	}
+	return res, nil
 }
