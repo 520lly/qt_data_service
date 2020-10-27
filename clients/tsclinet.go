@@ -3,7 +3,7 @@ package clients
 import(
    "fmt"
 
-   //"github.com/520lly/qt_data_service/models"
+   "github.com/520lly/qt_data_service/models"
    tsg "github.com/520lly/tushare-go"
    jsoniter "github.com/json-iterator/go"
 )
@@ -26,26 +26,34 @@ func NewTsClient(market, exchangeName, currencyPair, token string) *TsClient {
 		c:            c}
 }
 
-func (c *TsClient) GetStockBasic() (sb *[]string){
+func (c *TsClient) GetStockBasic() (items *[][]interface{}){
    params := make(map[string]string)
    params["is_hs"]="N"
    params["list_status"]="L"
    params["exchange"]=""
-   fields := []string{ "ts_code", "symbol", "name", "area", "industry", "fullname", "market", "exchange", "curr_type", "list_status", "list_date", "delist_date", "is_hs"}
-   data, err := c.c.StockBasic(params, fields)
+   data, err := c.c.StockBasic(params, models.FieldSymbol)
    if err == nil {
-      //var infos []*models.StockBasic
       fmt.Printf("%T %s %d msg:%v fields:%v size:%d\n", data, data.RequestID, data.Code, data.Msg, data.Data.Fields, len(data.Data.Items))
-      for _, item := range data.Data.Items {
-         //fmt.Printf("%T %v\n", item, item)
-         str := fmt.Sprintf("%s", item)
-         fmt.Printf("%T %v\n", str, str)
-         //var data []string
-         //for _, f := range item {
-            //fmt.Printf("Type %T %v\n", f, f)
-            ////data = append(data, f)
-         //}
-      }
+      return &data.Data.Items
+   }
+   return nil
+}
+
+func (c *TsClient) GetCompanyBasic() (items *[][]interface{}){
+   params := make(map[string]string)
+   data, err := c.c.StockCompany(params, models.CompanyFieldSymbol)
+   if err == nil {
+      fmt.Printf("%T %s %d msg:%v fields:%v size:%d\n", data, data.RequestID, data.Code, data.Msg, data.Data.Fields, len(data.Data.Items))
+      return &data.Data.Items
+   }
+   return nil
+}
+
+func (c *TsClient) GetTradeDaily(params *map[string]string) (items *[][]interface{}) {
+   data, err := c.c.Daily(*params, models.TradeDailyFieldSymbol)
+   if err == nil {
+      fmt.Printf("%T %s %d msg:%v fields:%v size:%d\n", data, data.RequestID, data.Code, data.Msg, data.Data.Fields, len(data.Data.Items))
+      return &data.Data.Items
    }
    return nil
 }

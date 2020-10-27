@@ -10,9 +10,11 @@ const(
    _ DataFlag = iota
    DataFlag_Stock_Basic
    DataFlag_Stock_Company
+   DataFlag_Trace_Daily
 )
 
 type FieldStockBasic int
+
 const(
    _ FieldStockBasic = iota
    FieldStockBasic_Ts_Code
@@ -31,7 +33,7 @@ const(
 )
 
 type StockBasic struct {
-   TsCode      string 
+   TsCode      string
    Symbol      string
    Name        string
    Area        string
@@ -54,3 +56,6 @@ func (s FieldStockBasic) String() (sym string) {
 	return fmt.Sprintf("UNKNOWN_METHOD_TYPE (%d)", s)
 }
 
+var CompanyFieldSymbol = []string{ "ts_code", "exchange", "chairman", "manager", "secretary", "reg_capital", "setup_date", "province", "city", "introduction", "website", "email", "office",  "main_business","employees", "business_scope"}
+
+var TradeDailyFieldSymbol = []string{ "ts_code", "trade_date", "open", "high", "low", "close", "pre_close", "change", "pct_chg", "vol", "amount"}

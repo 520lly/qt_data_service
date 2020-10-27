@@ -8,9 +8,10 @@ import(
 	"os"
 
    "github.com/520lly/qt_data_service/clients"
-   //"github.com/520lly/qt_data_service/models"
+   "github.com/520lly/qt_data_service/strategies"
 	"github.com/520lly/qt_data_service/config"
    "github.com/520lly/qt_data_service/storage"
+   "github.com/520lly/qt_data_service/models"
    "github.com/520lly/qt_data_service/collector"
 	"github.com/520lly/qt_data_service/storage/csv"
 	"github.com/520lly/qt_data_service/storage/influxdb"
@@ -23,6 +24,8 @@ import(
 
 var (
 	cfg config.Config
+   stg strategies.StockStrategy 
+   home string 
 )
 
 func usage() {
@@ -54,13 +57,14 @@ func main() {
 	if cfg.Store.Csv == cfg.Store.InfluxDB {
 		panic("currently only support csv, please check your configure")
 	}
+   home = os.Getenv("HOME")
 
 	ctx, cancel := context.WithCancel(context.Background())
+   stgs := make(map[string]strategies.StockStrategy)
 	for _, v := range cfg.Subs {
 		var sto storage.Storage
 		if cfg.Store.Csv {
-         home := os.Getenv("HOME")
-			sto = csv.NewCsvStorage(ctx, v.ExchangeName, v.Market, v.CurrencyPair, v.ContractType, v.Flag, home, cfg.Store.CsvCfg.Location)
+			sto = csv.NewCsvStorage(ctx, v.Market, v.ExchangeName, v.CurrencyPair, v.ContractType, v, home, cfg.Store.CsvCfg.Location)
 		}
 		if cfg.Store.InfluxDB {
 			sto = influxdb.NewInfluxdb(ctx, v.ExchangeName, v.CurrencyPair, v.ContractType, cfg.Store.InfluxDbCfg.Url, cfg.Store.InfluxDbCfg.Database, cfg.Store.InfluxDbCfg.Username, cfg.Store.InfluxDbCfg.Password)
@@ -68,11 +72,16 @@ func main() {
 		go sto.SaveWorker()
       cl := &clients.TsClient{}
       cl = clients.NewTsClient(v.Market, v.ExchangeName, v.CurrencyPair, cfg.Tokens.TuShare)
-      collector.NewTsCollector(ctx, cl, 10, sto)
-      //collector.ts_collector.NewTsCollector(ctx, cl, 10, sto)
+      stg := strategies.StockStrategy{}
+      stg.LoadStockStrntegy(&cfg)
+      stgs[v.ExchangeName] = stg
       // TODO Initializing collector worker
-
+      collector.NewTsCollector(ctx, cl, stg, sto)
    }
+   stgs["sh"].TsEvent <- models.DataFlag_Stock_Basic
+   stgs["sz"].TsEvent <- models.DataFlag_Stock_Basic
+   stgs["sh"].TsEvent <- models.DataFlag_Stock_Company
+   stgs["sz"].TsEvent <- models.DataFlag_Stock_Company
 
 	exitSignal := make(chan os.Signal, 1)
 	sigs := []os.Signal{os.Interrupt, syscall.SIGILL, syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGTERM}

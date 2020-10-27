@@ -1,6 +1,6 @@
 package config
 
-import "github.com/goex-top/market_center"
+import "github.com/520lly/qt_data_service/models"
 
 type Subscribe struct {
 	Market       string                 `json:"market" yaml:"market" default:""`
@@ -8,7 +8,9 @@ type Subscribe struct {
 	CurrencyPair string                 `json:"currency_pair" yaml:"currency_pair" default:""`
 	ContractType string                 `json:"contract_type,omitempty" yaml:"contract_type" default:""`
 	Period       int64                  `json:"period" yaml:"period" default:"100"`
-	Flag         market_center.DataFlag `json:"flag" yaml:"flag" default:"1"`
+	Flag         models.DataFlag        `json:"flag" yaml:"flag" default:"1"`
+	StockBasic   string                 `json:"stock_basic" yaml:"stock_basic" default:"stock_basic"`
+	CompanyBasic string                 `json:"company_basic" yaml:"company_basic" default:"company_basic"`
 }
 
 type Storage struct {
@@ -25,9 +27,11 @@ type Storage struct {
 	} `json:"influx_db_cfg" yaml:"influx_db_cfg"`
 	// TBD
 }
+
 type Tokens struct {
    TuShare     string `json:"tushare" yaml:"tushare" default:""`
 }
+
 type Config struct {
 	Subs             []Subscribe `json:"subs" yaml:"subs" default:"subs"`
    Store            Storage     `json:"store" yaml:"store" default:""`

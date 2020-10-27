@@ -3,7 +3,25 @@
     {
       "market": "stock",
       "exchange_name": "sh",
-      "currency_pair": "yuan"
+      "currency_pair": "yuan",
+      "period": {
+         "stock_basic": 30,
+         "company_basic": 30,
+         "trade_daily": 120
+      },
+      "stock_basic": "stock_basic",
+      "company_basic": "company_basic"
+    },
+    {
+      "market": "stock",
+      "exchange_name": "sz",
+      "currency_pair": "yuan",
+      "period": {
+         "stock_basic": 30,
+         "company_basic": 30,
+         "trade_daily": 120
+      "stock_basic": "stock_basic",
+      "company_basic": "company_basic"
     }
   ],
   "store": {
