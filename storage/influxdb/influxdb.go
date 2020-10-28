@@ -6,7 +6,7 @@ import (
 	_ "github.com/influxdata/influxdb1-client" // this is important because of the bug in go mod
 	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/nntaoli-project/goex"
-	//"github.com/520lly/qt_data_service/models"
+   "github.com/520lly/qt_data_service/config"
 	"log"
 	"strings"
 	"time"
@@ -79,11 +79,8 @@ func (s *InfluxdbStorage) SaveCompanyBasic(items *[][]interface{}) {
 func (s *InfluxdbStorage) GetFullPath() string {
 	return ""
 }
-func (s *InfluxdbStorage) GetStockBasic() string {
-	return ""
-}
-func (s *InfluxdbStorage) GetCompanyBasic() string {
-	return ""
+func (s *InfluxdbStorage) GetSubscribe() config.Subscribe{
+   return config.Subscribe{}
 }
 
 func (s *InfluxdbStorage) SaveDepth(depth *goex.Depth) {

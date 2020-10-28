@@ -3,17 +3,19 @@ package initializer
 import (
 	"context"
 	"log"
-	"regexp"
+	"encoding/csv"
+   "fmt"
+	//"strings"
 
 	"github.com/520lly/qt_data_service/clients"
 	"github.com/520lly/qt_data_service/collector"
 	"github.com/520lly/qt_data_service/config"
 	"github.com/520lly/qt_data_service/models"
 	"github.com/520lly/qt_data_service/storage"
-	"github.com/520lly/qt_data_service/storage/csv"
+   mycsv "github.com/520lly/qt_data_service/storage/csv"
 	"github.com/520lly/qt_data_service/storage/influxdb"
 	"github.com/520lly/qt_data_service/strategies"
-	"github.com/520lly/qt_data_service/utils"
+   "github.com/520lly/qt_data_service/utils"
 )
 
 type TsContext struct {
@@ -29,20 +31,52 @@ func (tsc *TsContext) InitStockStrategies() {
 		return
 	}
 	for key, val := range *tsc.TsStorage {
-		log.Println("%v:%v", key, *val)
-		//Check StockBasic csv file exist or not
-		err, files := utils.FilteredSearchOfDirectoryTree(regexp.MustCompile((*val).GetStockBasic()), (*val).GetFullPath())
-		if err == nil {
-			log.Println("tsc.TsStrategies %v\n", (*(*tsc.TsStrategies)[key]).TsEvent)
-			if len(files) <= 0 {
-				tse := strategies.TsEvent{models.DataFlag_Stock_Basic, nil}
-				(*(*tsc.TsStrategies)[key]).TsEvent <- tse
-				//stgs["sz"].TsEvent <- models.DataFlag_Stock_Basic
-				//stgs["sh"].TsEvent <- models.DataFlag_Stock_Company
-				//stgs["sz"].TsEvent <- models.DataFlag_Stock_Company
-			}
-		}
-	}
+      log.Println("key-val:", key, *val)
+      sub := (*val).GetSubscribe()
+      fullPath := (*val).GetFullPath()
+      //Check if update basic info. condition reached
+      ret, files := strategies.CheckUpdateBasic(sub.Period.StockBasic, sub.StockBasic, fullPath)
+      if ret {
+         tse := strategies.TsEvent{models.DataFlag_Stock_Basic, nil}
+         (*(*tsc.TsStrategies)[key]).TsEvent <- tse
+      } else {
+         //Load the Basic stock infor and start to download history data
+         tsc.CheckUpdateDaily(files[0])
+      }
+      ret, files = strategies.CheckUpdateBasic(sub.Period.CompanyBasic, sub.CompanyBasic, fullPath)
+      if ret {
+         tse := strategies.TsEvent{models.DataFlag_Stock_Company, nil}
+         (*(*tsc.TsStrategies)[key]).TsEvent <- tse
+      } else {
+         //Load the Basic stock infor and start to download history data
+         //tsc.CheckUpdateDaily(files[0])
+      }
+   }
+}
+
+func (tsc *TsContext) CheckUpdateDaily(f string) {
+   log.Printf("files:[%v]",f)
+   _, fp := utils.OpenCsvFile(f)
+   if fp != nil {
+      var csvReader *csv.Reader
+      csvReader = csv.NewReader(fp)
+      records, err:= csvReader.ReadAll()
+      if err == nil {
+         for _, r := range records[1:] {
+            log.Printf("%T:%v", r, r)
+            sym := r[1]
+            listDate := r[10]
+            today, ts := utils.GetTodayString("20060102")
+            _ = today
+            historyFileNameTillToday := fmt.Sprintf("%s_%s-%s.csv", sym, listDate, ts)
+            isNew, csvFp := utils.OpenCsvFile(historyFileNameTillToday)
+            log.Printf("isNew:%v csvFp: %v", isNew, csvFp)
+            tse := strategies.TsEvent{models.DataFlag_Trace_Daily, &map[string]string{"ts_code":"000001.SZ", "start_date":listDate, "end_date":ts}}
+            (*(*tsc.TsStrategies)["sh"]).TsEvent <- tse
+            break
+         }
+      }
+   }
 }
 
 func TsInit(ctx *context.Context, cfg *config.Config, home string) *TsContext {
@@ -53,7 +87,7 @@ func TsInit(ctx *context.Context, cfg *config.Config, home string) *TsContext {
 	for _, v := range cfg.Subs {
 		var sto storage.Storage
 		if cfg.Store.Csv {
-			sto = csv.NewCsvStorage(*ctx, v.Market, v.ExchangeName, v.CurrencyPair, v.ContractType, v, home, cfg.Store.CsvCfg.Location)
+			sto = mycsv.NewCsvStorage(*ctx, cfg.Store, v, home)
 		}
 		if cfg.Store.InfluxDB {
 			sto = influxdb.NewInfluxdb(*ctx, v.ExchangeName, v.CurrencyPair, v.ContractType, cfg.Store.InfluxDbCfg.Url, cfg.Store.InfluxDbCfg.Database, cfg.Store.InfluxDbCfg.Username, cfg.Store.InfluxDbCfg.Password)

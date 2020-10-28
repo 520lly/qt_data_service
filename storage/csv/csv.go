@@ -18,13 +18,14 @@ import (
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type CsvStorage struct {
-	market           string
-	exchangeName     string
-	pair             string
-	contractType     string
-	subscribe        config.Subscribe
+	//market           string
+	//exchangeName     string
+	//pair             string
+	//contractType     string
+   sub              config.Subscribe
+   store              config.Storage
 	prefix           string
-	outputPath       string
+	//outputPath       string
 	fullPath         string
 	saveStockBasic   chan [][]interface{}
 	saveCompanyBasic chan [][]interface{}
@@ -38,13 +39,14 @@ type CsvStorage struct {
 
 func NewCsvStorage(
 	ctx context.Context,
-	market string,
-	exchangeName string,
-	pair string,
-	contractType string,
+	store config.Storage,
+	//market string,
+	//exchangeName string,
+	//pair string,
+	//contractType string,
 	sub config.Subscribe,
 	prefix string,
-	outputPath string,
+	//outputPath string,
 ) *CsvStorage {
 	var saveStockBasic chan [][]interface{}
 	var saveCompanyBasic chan [][]interface{}
@@ -57,41 +59,45 @@ func NewCsvStorage(
 	ts := fileTimestamp.Format("2006-01-02")
 	isNew := false
 
-	path := prefix + "/" + outputPath + "/" + market + "/" + exchangeName
-	ret, _ := utils.EnsurePathExist(path)
+	root := prefix + "/" + store.CsvCfg.Location  + "/" + sub.Market + "/" + sub.ExchangeName
+	ret, _ := utils.EnsurePathExist(root)
 	if ret == false {
 		panic("path was not exist!")
 	}
-	log.Println("%s exist!", path)
+	log.Printf("%s exist!", root)
 
-	isNew, basicFile = OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", path, sub.StockBasic, ts))
+	history := root + "/" + store.CsvCfg.History
+	ret, _ = utils.EnsurePathExist(history)
+	if ret == false {
+		panic("path was not exist!")
+	}
+	log.Printf("%s exist!", history)
+
+	isNew, basicFile = utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.StockBasic, ts))
 	basicCsv = csv.NewWriter(basicFile)
 	if isNew {
-		data := models.FieldSymbol
-		basicCsv.Write(data)
-		basicCsv.Flush()
+		utils.WriteData2CsvFile(basicCsv, models.FieldSymbol)
 	}
 	saveStockBasic = make(chan [][]interface{})
 
-	isNew, companyFile = OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", path, sub.CompanyBasic, ts))
+	isNew, companyFile = utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.CompanyBasic, ts))
 	companyCsv = csv.NewWriter(companyFile)
 	if isNew {
-		data := models.CompanyFieldSymbol
-		companyCsv.Write(data)
-		companyCsv.Flush()
+		utils.WriteData2CsvFile(companyCsv, models.CompanyFieldSymbol)
 	}
 	saveCompanyBasic = make(chan [][]interface{})
 
 	return &CsvStorage{
 		ctx:              ctx,
-		market:           market,
-		exchangeName:     exchangeName,
-		pair:             pair,
-		contractType:     contractType,
-		subscribe:        sub,
+		//market:           sub.Market,
+		//exchangeName:     sub.ExchangeName,
+		//pair:             sub.CurrencyPair,
+		//contractType:     sub.ContractType,
+		sub:              sub,
+      store:            store,
 		prefix:           prefix,
-		outputPath:       outputPath,
-		fullPath:         path,
+		//outputPath:       outputPath,
+		fullPath:         root,
 		fileTimestamp:    fileTimestamp,
 		saveStockBasic:   saveStockBasic,
 		basicFile:        basicFile,
@@ -119,15 +125,13 @@ func (s *CsvStorage) SaveCompanyBasic(items *[][]interface{}) {
 func (s *CsvStorage) GetFullPath() string {
 	return s.fullPath
 }
-func (s *CsvStorage) GetStockBasic() string {
-	return s.subscribe.StockBasic
-}
-func (s *CsvStorage) GetCompanyBasic() string {
-	return s.subscribe.CompanyBasic
+func (s *CsvStorage) GetSubscribe() config.Subscribe{
+   return s.sub
 }
 
+
 func (s *CsvStorage) Close() {
-	if s.basicCsv != nil {
+   if s.basicCsv != nil {
 		s.basicCsv.Flush()
 		s.basicFile.Close()
 	}
@@ -139,8 +143,8 @@ func (s *CsvStorage) Close() {
 func (s *CsvStorage) compress(fileTimestamp time.Time) {
 	ts := fileTimestamp.Format("2006-01-02")
 	//src := fmt.Sprintf("%s_%s_%s.csv", s.exchangeName, s.pair, ts)
-	filters := []string{s.exchangeName, s.pair, ts, ".csv"}
-	dst := fmt.Sprintf("%s/%s_%s_%s.tar.gz", s.outputPath, s.exchangeName, s.pair, ts)
+	filters := []string{s.sub.ExchangeName, s.sub.CurrencyPair, ts, ".csv"}
+	dst := fmt.Sprintf("%s/%s_%s_%s.tar.gz", s.store.CsvCfg.Location, s.sub.ExchangeName, s.sub.CurrencyPair, ts)
 
 	csvs := GetSrcFileName(s.prefix, filters)
 	log.Println("start to compress *.csv to *.tar.gz, ts:", ts)
@@ -173,7 +177,7 @@ func (s *CsvStorage) reNewFile() {
 	ts := s.fileTimestamp.Format("2006-01-02")
 	isNew := false
 
-	isNew, s.basicFile = OpenCsvFile(fmt.Sprintf("%s/basic_%s.csv", s.fullPath, ts))
+	isNew, s.basicFile = utils.OpenCsvFile(fmt.Sprintf("%s/basic_%s.csv", s.fullPath, ts))
 	s.basicCsv = csv.NewWriter(s.basicFile)
 	if isNew {
 		data := models.FieldSymbol
@@ -190,10 +194,11 @@ func (s *CsvStorage) SaveWorker() {
 			//s.reNewFile()
 		case o := <-s.saveStockBasic:
 			//empty old file
+         //WriteData2CsvFile(companyCsv, models.CompanyFieldSymbol)
 			for _, item := range o {
 				ss := strings.Split(fmt.Sprintf("%s", item[0]), ".")
-				if strings.ToUpper(s.exchangeName) == ss[1] {
-					var data []string
+				if strings.ToUpper(s.sub.ExchangeName) == ss[1] {
+               var data []string
 					for _, f := range item {
 						data = append(data, fmt.Sprintf("%v", f))
 					}
@@ -206,7 +211,7 @@ func (s *CsvStorage) SaveWorker() {
 			//empty old file
 			for _, item := range o {
 				ss := strings.Split(fmt.Sprintf("%s", item[0]), ".")
-				if strings.ToUpper(s.exchangeName) == ss[1] {
+				if strings.ToUpper(s.sub.ExchangeName) == ss[1] {
 					var data []string
 					for _, f := range item {
 						data = append(data, fmt.Sprintf("%v", f))
@@ -218,33 +223,9 @@ func (s *CsvStorage) SaveWorker() {
 
 		case <-s.ctx.Done():
 			s.Close()
-			log.Printf("(%s) %s saveWorker exit\n", s.exchangeName, s.pair)
+			log.Printf("(%s) %s saveWorker exit\n", s.sub.ExchangeName, s.sub.CurrencyPair)
 			return
 		}
 	}
 }
 
-func OpenCsvFile(fileName string) (bool, *os.File) {
-	var file *os.File
-	var err1 error
-	var isNew = false
-	checkFileIsExist := func(fileName string) bool {
-		var exist = true
-		if _, err := os.Stat(fileName); os.IsNotExist(err) {
-			exist = false
-		}
-		return exist
-	}
-	if checkFileIsExist(fileName) {
-		file, err1 = os.OpenFile(fileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, 666)
-	} else {
-		file, err1 = os.Create(fileName)
-		file.WriteString("\xEF\xBB\xBF") //for writing Chinese to csv file
-		isNew = true
-	}
-	if err1 != nil {
-		fmt.Fprintf(os.Stderr, "unable to write file on filehook %v", err1)
-		panic(err1)
-	}
-	return isNew, file
-}

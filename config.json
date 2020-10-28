@@ -5,9 +5,9 @@
       "exchange_name": "sh",
       "currency_pair": "yuan",
       "period": {
-         "stock_basic": 30,
-         "company_basic": 30,
-         "trade_daily": 120
+         "stock_basic": "720h",
+         "company_basic": "720h",
+         "trade_daily": "120s"
       },
       "stock_basic": "stock_basic",
       "company_basic": "company_basic"
@@ -17,9 +17,9 @@
       "exchange_name": "sz",
       "currency_pair": "yuan",
       "period": {
-         "stock_basic": 30,
-         "company_basic": 30,
-         "trade_daily": 120
+         "stock_basic": "720h",
+         "company_basic": "720h",
+         "trade_daily": "120s"
       },
       "stock_basic": "stock_basic",
       "company_basic": "company_basic"
@@ -28,7 +28,8 @@
   "store": {
     "csv": true,
     "csv_cfg": {
-      "location": "qt_data"
+      "location": "qt_data",
+      "history": "history"
     },
     "influx_db": false,
     "influx_db_cfg": {

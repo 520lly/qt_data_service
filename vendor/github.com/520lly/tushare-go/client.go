@@ -58,7 +58,6 @@ func (api *TuShare) doRequest(req *http.Request) (*APIResponse, error) {
 		return nil, fmt.Errorf("oops! Network error")
 	}
 
-
 	// Read request
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

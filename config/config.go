@@ -8,9 +8,9 @@ type Subscribe struct {
 	CurrencyPair string `json:"currency_pair" yaml:"currency_pair" default:""`
 	ContractType string `json:"contract_type,omitempty" yaml:"contract_type" default:""`
 	Period       struct {
-		StockBasic   int64 `json:"stock_basic" yaml:"stock_basic" default:"30"`
-		CompanyBasic int64 `json:"company_basic" yaml:"company_basic" default:"30"`
-		TradeDaily   int64 `json:"trade_daily" yaml:"trade_daily" default:"120"`
+		StockBasic   string `json:"stock_basic" yaml:"stock_basic" default:"30"`
+		CompanyBasic string `json:"company_basic" yaml:"company_basic" default:"30"`
+		TradeDaily   string `json:"trade_daily" yaml:"trade_daily" default:"120"`
 	}
 	Flag         models.DataFlag `json:"flag" yaml:"flag" default:"1"`
 	StockBasic   string          `json:"stock_basic" yaml:"stock_basic" default:"stock_basic"`
@@ -21,6 +21,7 @@ type Storage struct {
 	Csv    bool `json:"csv" yaml:"csv" `
 	CsvCfg struct {
 		Location string `json:"location" yaml:"location" default:"qt_data"`
+		History  string `json:"history" yaml:"history" default:"history"`
 	} `json:"csv_cfg" yaml:"csv_cfg"`
 	InfluxDB    bool `json:"influx_db" yaml:"influx_db" `
 	InfluxDbCfg struct {

@@ -46,6 +46,7 @@ func NewTsCollector(ctx *context.Context, c *clients.TsClient, stg *strategies.S
 						(*store).SaveCompanyBasic(data)
 					}
 				case models.DataFlag_Trace_Daily:
+               log.Printf("ApiParams: %v", o.ApiParams)
 					data := c.GetTradeDaily(o.ApiParams)
 					if data != nil {
 						(*store).SaveCompanyBasic(data)
