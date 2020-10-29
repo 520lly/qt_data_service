@@ -4,6 +4,8 @@ import (
 	"log"
 	"regexp"
 	"time"
+	"os"
+   //"encoding/csv"
 
 	"github.com/520lly/qt_data_service/config"
 	"github.com/520lly/qt_data_service/models"
@@ -17,7 +19,9 @@ const (
 type TsEvent struct {
 	DataFlag  models.DataFlag    `default: models.DataFlag_Stock_Basic`
 	ApiParams *map[string]string `default: nil`
+	CsvFile   *os.File           `default: nil`
 }
+
 type StockStrategy struct {
 	PeriodStockBasic   int64
 	PeriodCompanyBasic int64

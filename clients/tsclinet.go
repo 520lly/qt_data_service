@@ -50,10 +50,17 @@ func (c *TsClient) GetCompanyBasic() (items *[][]interface{}) {
 }
 
 func (c *TsClient) GetTradeDaily(params *map[string]string) (items *[][]interface{}) {
-	data, err := c.c.Daily(*params, models.TradeDailyFieldSymbol)
+   if params == nil {
+      fmt.Printf("ERROR: params must be valid!")
+      return
+   }
+   var data [][]string
+   data = append(data, models.TradeDailyFieldSymbol)
+   fmt.Printf("data:%v\n", data)
+   res, err := c.c.Daily(*params, models.TradeDailyFieldSymbol)
 	if err == nil {
-		fmt.Printf("%T %s %d msg:%v fields:%v size:%d\n", data, data.RequestID, data.Code, data.Msg, data.Data.Fields, len(data.Data.Items))
-		return &data.Data.Items
+		fmt.Printf("%T %s %d msg:%v fields:%v size:%d\n", res, res.RequestID, res.Code, res.Msg, res.Data.Fields, len(res.Data.Items))
+		return &res.Data.Items
 	}
 	return nil
 }

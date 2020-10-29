@@ -106,6 +106,11 @@ func (s *InfluxdbStorage) SaveKline(kline *goex.Kline) {
 	s.saveKlineChan <- *kline
 }
 
+func (s *InfluxdbStorage) SaveData(sci *StoCsvInstance) {
+   return
+}
+
+
 func (s *InfluxdbStorage) Close() {
 	//close(s.saveDepthChan)
 	//close(s.saveTickerChan)

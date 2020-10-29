@@ -17,13 +17,20 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
+type StoCsvInstance struct {
+	DoubleArrayData   *[][]interface{}
+	SingleArrayData   *[]interface{}
+	CsvFile           *os.File
+}
+
 type CsvStorage struct {
 	//market           string
 	//exchangeName     string
 	//pair             string
 	//contractType     string
+   sci              chan StoCsvInstance
    sub              config.Subscribe
-   store              config.Storage
+   store            config.Storage
 	prefix           string
 	//outputPath       string
 	fullPath         string
@@ -87,12 +94,15 @@ func NewCsvStorage(
 	}
 	saveCompanyBasic = make(chan [][]interface{})
 
+   sci := make(chan StoCsvInstance)
+
 	return &CsvStorage{
 		ctx:              ctx,
 		//market:           sub.Market,
 		//exchangeName:     sub.ExchangeName,
 		//pair:             sub.CurrencyPair,
 		//contractType:     sub.ContractType,
+      sci:              sci,
 		sub:              sub,
       store:            store,
 		prefix:           prefix,
@@ -120,6 +130,25 @@ func (s *CsvStorage) SaveCompanyBasic(items *[][]interface{}) {
 		return
 	}
 	s.saveCompanyBasic <- *items
+}
+
+func (s *CsvStorage) SaveData(sci *StoCsvInstance) {
+   if sci == nil {
+      return
+   }
+   s.sci <- *sci
+   log.Printf("save data [%v]\n", sci)
+}
+
+//func (s *CsvStorage) GetStoCsvInstance() *StoCsvInstance {
+	//return s.sci
+//}
+
+func (s *CsvStorage) UpdateStoCsvInstance(da_data *[][]interface{}, sa_data *[]interface{}, csvw *os.File) {
+   //s.sci.DoubleArrayData = da_data
+   //s.sci.SingleArrayData = sa_data
+   //s.sci.CsvFile =  csvw
+
 }
 
 func (s *CsvStorage) GetFullPath() string {
@@ -187,45 +216,62 @@ func (s *CsvStorage) reNewFile() {
 }
 
 func (s *CsvStorage) SaveWorker() {
-	tick := time.NewTicker(time.Second)
-	for {
-		select {
-		case <-tick.C:
-			//s.reNewFile()
-		case o := <-s.saveStockBasic:
-			//empty old file
+   tick := time.NewTicker(time.Second)
+   for {
+      select {
+      case <-tick.C:
+         //s.reNewFile()
+         log.Println("tick.C")
+      case o := <-s.sci:
+         log.Printf("o.CsvFile: %v", o.CsvFile)
+         if o.CsvFile != nil {
+            defer o.CsvFile.Close()
+            csvw := csv.NewWriter(o.CsvFile)
+            if o.DoubleArrayData != nil {
+               for _, item := range *o.DoubleArrayData {
+                  var data []string
+                  for _, f := range item {
+                     data = append(data, fmt.Sprintf("%v", f))
+                  }
+                  csvw.Write(data)
+               }
+            }
+            csvw.Flush()
+         }
+      case o := <-s.saveStockBasic:
+         //empty old file
          //WriteData2CsvFile(companyCsv, models.CompanyFieldSymbol)
-			for _, item := range o {
-				ss := strings.Split(fmt.Sprintf("%s", item[0]), ".")
-				if strings.ToUpper(s.sub.ExchangeName) == ss[1] {
+         for _, item := range o {
+            ss := strings.Split(fmt.Sprintf("%s", item[0]), ".")
+            if strings.ToUpper(s.sub.ExchangeName) == ss[1] {
                var data []string
-					for _, f := range item {
-						data = append(data, fmt.Sprintf("%v", f))
-					}
-					s.basicCsv.Write(data)
-				}
-			}
-			s.basicCsv.Flush()
+               for _, f := range item {
+                  data = append(data, fmt.Sprintf("%v", f))
+               }
+               s.basicCsv.Write(data)
+            }
+         }
+         s.basicCsv.Flush()
 
-		case o := <-s.saveCompanyBasic:
-			//empty old file
-			for _, item := range o {
-				ss := strings.Split(fmt.Sprintf("%s", item[0]), ".")
-				if strings.ToUpper(s.sub.ExchangeName) == ss[1] {
-					var data []string
-					for _, f := range item {
-						data = append(data, fmt.Sprintf("%v", f))
-					}
-					s.companyCsv.Write(data)
-				}
-			}
-			s.companyCsv.Flush()
+      case o := <-s.saveCompanyBasic:
+         //empty old file
+         for _, item := range o {
+            ss := strings.Split(fmt.Sprintf("%s", item[0]), ".")
+            if strings.ToUpper(s.sub.ExchangeName) == ss[1] {
+               var data []string
+               for _, f := range item {
+                  data = append(data, fmt.Sprintf("%v", f))
+               }
+               s.companyCsv.Write(data)
+            }
+         }
+         s.companyCsv.Flush()
 
-		case <-s.ctx.Done():
-			s.Close()
-			log.Printf("(%s) %s saveWorker exit\n", s.sub.ExchangeName, s.sub.CurrencyPair)
-			return
-		}
-	}
+      case <-s.ctx.Done():
+         s.Close()
+         log.Printf("(%s) %s saveWorker exit\n", s.sub.ExchangeName, s.sub.CurrencyPair)
+         return
+      }
+   }
 }
 
