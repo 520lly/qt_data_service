@@ -1,10 +1,12 @@
 package utils
 
 import (
+	"bufio"
+	"encoding/csv"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
-	"encoding/csv"
 	"regexp"
 )
 
@@ -26,16 +28,17 @@ func EnsurePathExist(path string) (bool, error) {
 }
 
 func CheckFileIsExist(fileName string) bool {
-   var exist = true
-   if _, err := os.Stat(fileName); os.IsNotExist(err) {
-      exist = false
-   }
-   return exist
+	var exist = true
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		exist = false
+	}
+	return exist
 }
 
-func FilteredSearchOfDirectoryTree(re *regexp.Regexp, dir string) (error, []string) {
-   // Just a demo, this is how we capture the files that match the pattern.
+func FilteredSearchOfDirectoryTree(reStr string, dir string) (error, []string) {
+	// Just a demo, this is how we capture the files that match the pattern.
 	files := []string{}
+	re := regexp.MustCompile(reStr)
 
 	// Function variable that can be used to filter
 	// files based on the pattern.
@@ -65,7 +68,7 @@ func GetFileSize(file string) (int64, error) {
 	if err != nil {
 		return -1, err
 	}
-   size := fp.Size()
+	size := fp.Size()
 	return size, nil
 }
 
@@ -75,7 +78,7 @@ func OpenCsvFile(fileName string) (bool, *os.File) {
 	var isNew = false
 
 	if CheckFileIsExist(fileName) {
-      file, err1 = os.OpenFile(fileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, 666)
+		file, err1 = os.OpenFile(fileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, 666)
 	} else {
 		file, err1 = os.Create(fileName)
 		file.WriteString("\xEF\xBB\xBF") //for writing Chinese to csv file
@@ -95,4 +98,24 @@ func WriteData2CsvFile(csvw *csv.Writer, data []string) {
 	//data := models.FieldSymbol
 	csvw.Write(data)
 	csvw.Flush()
+}
+
+func SeekToLine(r io.Reader, lineNo int) (line []byte, offset int, err error) {
+	s := bufio.NewScanner(r)
+	var pos int
+
+	s.Split(func(data []byte, atEof bool) (advance int, token []byte, err error) {
+		advance, token, err = bufio.ScanLines(data, atEof)
+		pos += advance
+		return advance, token, err
+	})
+
+	for i := 0; i < lineNo; i++ {
+		offset = pos
+		if !s.Scan() {
+			return nil, 0, io.EOF
+		}
+	}
+
+	return s.Bytes(), pos, nil
 }
