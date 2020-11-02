@@ -81,16 +81,16 @@ func NewCsvStorage(
 	log.Printf("%s exist!", history)
 
 	isNew, basicFile = utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.StockBasic, ts))
-	basicCsv = csv.NewWriter(basicFile)
+   basicCsv = csv.NewWriter(basicFile)
 	if isNew {
-		utils.WriteData2CsvFile(basicCsv, models.FieldSymbol)
+		utils.WriteData2CsvFile(basicFile, models.FieldSymbol)
 	}
 	saveStockBasic = make(chan [][]interface{})
 
 	isNew, companyFile = utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.CompanyBasic, ts))
-	companyCsv = csv.NewWriter(companyFile)
+   companyCsv = csv.NewWriter(companyFile)
 	if isNew {
-		utils.WriteData2CsvFile(companyCsv, models.CompanyFieldSymbol)
+		utils.WriteData2CsvFile(companyFile, models.CompanyFieldSymbol)
 	}
 	saveCompanyBasic = make(chan [][]interface{})
 
@@ -111,10 +111,10 @@ func NewCsvStorage(
 		fileTimestamp:    fileTimestamp,
 		saveStockBasic:   saveStockBasic,
 		basicFile:        basicFile,
-		basicCsv:         basicCsv,
-		saveCompanyBasic: saveCompanyBasic,
+      basicCsv:         basicCsv,
+      saveCompanyBasic: saveCompanyBasic,
 		companyFile:      companyFile,
-		companyCsv:       companyCsv,
+      companyCsv:       companyCsv,
 	}
 }
 
@@ -159,8 +159,7 @@ func (s *CsvStorage) GetSubscribe() config.Subscribe {
 }
 
 func (s *CsvStorage) Close() {
-	if s.basicCsv != nil {
-		s.basicCsv.Flush()
+	if s.basicFile != nil {
 		s.basicFile.Close()
 	}
 	//close(s.saveDepthChan)
@@ -202,16 +201,16 @@ func (s *CsvStorage) reNewFile() {
 
 	s.fileTimestamp = now
 
-	ts := s.fileTimestamp.Format("2006-01-02")
-	isNew := false
+	//ts := s.fileTimestamp.Format("2006-01-02")
+	//isNew := false
 
-	isNew, s.basicFile = utils.OpenCsvFile(fmt.Sprintf("%s/basic_%s.csv", s.fullPath, ts))
-	s.basicCsv = csv.NewWriter(s.basicFile)
-	if isNew {
-		data := models.FieldSymbol
-		s.basicCsv.Write(data)
-		s.basicCsv.Flush()
-	}
+	//isNew, s.basicFile = utils.OpenCsvFile(fmt.Sprintf("%s/basic_%s.csv", s.fullPath, ts))
+	//s.basicCsv = csv.NewWriter(s.basicFile)
+	//if isNew {
+		//data := models.FieldSymbol
+		//s.basicCsv.Write(data)
+		//s.basicCsv.Flush()
+	//}
 }
 
 func (s *CsvStorage) SaveWorker() {

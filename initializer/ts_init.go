@@ -31,7 +31,7 @@ func (tsc *TsContext) InitStockStrategies() {
 		return
 	}
 	for key, val := range *tsc.TsStorage {
-		log.Println("key-val:", key, *val)
+		//log.Println("key-val:", key, *val)
 		sub := (*val).GetSubscribe()
 		fullPath := (*val).GetFullPath()
 		//Check if update basic info. condition reached
@@ -55,79 +55,74 @@ func (tsc *TsContext) InitStockStrategies() {
 }
 
 func (tsc *TsContext) CheckUpdateDaily(exchangeName string, f string) {
-	log.Printf("files:[%v]", f)
-	_, fp := utils.OpenCsvFile(f)
-	if fp != nil {
-		var csvReader *csv.Reader
-		csvReader = csv.NewReader(fp)
-		records, err := csvReader.ReadAll()
-		if err == nil {
-			for _, r := range records[1:] {
-				log.Printf("%T:%v", r, r)
-				sym := r[1]
-				start := r[10]
-				today, end := utils.GetTodayString("20060102")
-				_ = today
-				//dir := fmt.Sprintf("%s", (*(*tsc.TsStorage)[exchangeName]).GetFullPath()+"/history/")
-				//log.Printf("%s", dir)
-				//start, end, csvFp := isDataUpdated(dir, sym, listDate)
-				//if csvFp == nil {
-				//log.Printf("[%]")
-				//continue
-				//break
-				//} else {
-				//}
-				historyFileNameTillToday := fmt.Sprintf("%s_%s-%s.csv", (*(*tsc.TsStorage)[exchangeName]).GetFullPath()+"/history/"+sym, start, end)
-				isNew, csvFp := utils.OpenCsvFile(historyFileNameTillToday)
-				log.Printf("[%s] isNew:%v csvFp: %v", historyFileNameTillToday, isNew, csvFp)
-				//if isNew {
+   log.Printf("files:[%v]", f)
+   _, fp := utils.OpenCsvFile(f)
+   if fp != nil {
+      var csvReader *csv.Reader
+      csvReader = csv.NewReader(fp)
+      records, err := csvReader.ReadAll()
+      if err == nil {
+         for _, r := range records[1:] { //skip the firt line of symbols
+            //log.Printf("%T:%v", r, r)
+            sym := r[0]
+            start := r[10] //listDate
+            today, end := utils.GetTodayString("20060102")
+            _ = today
+            dir := fmt.Sprintf("%s", (*(*tsc.TsStorage)[exchangeName]).GetFullPath()+"/history/")
+            log.Printf("%s", dir)
+            start, end, csvFp := isDataUpdated(dir, sym, start)
+            if csvFp == nil {
+               log.Printf("FATAL ERROR: file [%s] open filed", sym)
+               continue
+            } else {
+               tse := strategies.TsEvent{
+                  models.DataFlag_Trace_Daily,
+                  &map[string]string{"ts_code": r[0], "start_date": start, "end_date": end}, csvFp}
 
-				//} else {
-
-				//}
-				tse := strategies.TsEvent{
-					models.DataFlag_Trace_Daily,
-					&map[string]string{"ts_code": r[0], "start_date": start, "end_date": end}, csvFp}
-
-				log.Printf("[%s]TsEvent:%v", exchangeName, tsc)
-				(*(*tsc.TsStrategies)[exchangeName]).TsEvent <- tse
-			}
-		}
-	}
-}
+                  log.Printf("[%s]TsEvent:%v", exchangeName, tsc)
+                  (*(*tsc.TsStrategies)[exchangeName]).TsEvent <- tse
+               }
+            }
+         }
+      }
+   }
 
 func isDataUpdated(dir string, sym string, listDate string) (start string, end string, fp *os.File) {
 	fp = nil
-	reStr := fmt.Sprintf("%s", sym+"_"+listDate+".*.csv")
+	hisFile := fmt.Sprintf("%s.csv", dir+sym)
 	today, ts := utils.GetTodayString("20060102")
 	_ = today
-	start = listDate
-	end = ts
-	diff := utils.CalcDateDiffByDay(start, end)
-	log.Printf("diff = %d", diff)
-	err, files := utils.FilteredSearchOfDirectoryTree(reStr, dir)
-	if err == nil && len(files) == 1 {
-		isNew, fp := utils.OpenCsvFile(files[0])
-		log.Printf("[%s] isNew:%v csvFp: %v", files[0], isNew, fp)
-		if fp != nil {
-			if isNew {
-			} else {
-				//old file and needs to be update
-				//csvr := csv.NewReader(fp)
-				//lines, err := utils.LineCounter(csvr)
-				if err == nil {
-					//log.Printf("len[%v]", lines)
-				}
-				//utils.SeekToLine(csvr, 1)
-				fp.Close()
-				fp = nil
-			}
-		} else {
-			log.Printf("open file [%s] faild\n", files[0])
-		}
-	} else {
-		log.Printf("No file or more files found with regex [%s]\n", reStr)
-	}
+   start = listDate
+   end = ts
+   isNew, fp := utils.OpenCsvFile(hisFile)
+   log.Printf("[%s] isNew:%v csvFp: %v", hisFile, isNew, fp)
+   if fp != nil {
+      if isNew {
+         utils.WriteData2CsvFile(fp, models.TradeDailyFieldSymbol)
+         return start, end, fp
+      } else {
+         //old file and needs to be update
+         csvr := csv.NewReader(fp)
+         records, err := csvr.ReadAll()
+         if err == nil {
+            size := len(records)
+            log.Printf("last line[%v]", records[size -1])
+            lastUpdate := records[size - 1][1]
+            diff := utils.CalcDateDiffByDay(lastUpdate, ts)
+            log.Printf("diff = %d", diff)
+            if diff > 1 { //at least is 2
+               start_new := utils.AddDays2Date(lastUpdate, 0, 0, 1)
+               start = start_new
+            } else {
+               fp.Close()
+               fp = nil
+            }
+         }
+      }
+   } else {
+      log.Printf("open file [%s] faild\n", hisFile)
+   }
+
 	return start, end, fp
 }
 

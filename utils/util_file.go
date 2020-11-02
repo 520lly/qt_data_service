@@ -91,11 +91,12 @@ func OpenCsvFile(fileName string) (bool, *os.File) {
 	return isNew, file
 }
 
-func WriteData2CsvFile(csvw *csv.Writer, data []string) {
-	if csvw == nil {
+func WriteData2CsvFile(fp *os.File, data []string) {
+	if fp == nil {
 		return
 	}
 	//data := models.FieldSymbol
+   csvw := csv.NewWriter(fp)
 	csvw.Write(data)
 	csvw.Flush()
 }
