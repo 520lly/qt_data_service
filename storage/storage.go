@@ -6,11 +6,12 @@ import (
 )
 
 type Storage interface {
-	SaveStockBasic(items *[][]interface{})
-	SaveCompanyBasic(items *[][]interface{})
+	//SaveStockBasic(items *[][]interface{})
+	//SaveCompanyBasic(items *[][]interface{})
 	GetFullPath() string
    GetSubscribe() config.Subscribe
 	SaveWorker()
 	SaveData(sci *mycsv.StoCsvInstance)
+   GetBasicFile(pat string) (mycsv.BasicCsvFileInfo, bool)
 	Close()
 }

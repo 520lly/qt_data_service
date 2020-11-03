@@ -1,7 +1,7 @@
 package models
 
 import (
-	//"fmt"
+   "os"
 )
 
 type DataFlag int
@@ -11,5 +11,13 @@ const (
 	DataFlag_Stock_Basic
 	DataFlag_Stock_Company
 	DataFlag_Trace_Daily
+	DataFlag_Trace_Calendar
 )
+
+
+type TsEvent struct {
+   DataFlag  DataFlag           `default: models.DataFlag_Stock_Basic`
+   ApiParams *map[string]string `default: nil`
+   CsvFile   *os.File           `default: nil`
+}
 

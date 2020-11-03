@@ -2,27 +2,27 @@
   "subs": [
     {
       "market": "stock",
-      "exchange_name": "sh",
+      "exchange_name": "SSE",
       "currency_pair": "yuan",
       "period": {
-         "stock_basic": "720h",
-         "company_basic": "720h",
+         "stock_basic": "7",
+         "company_basic": "7",
          "trade_daily": "120s"
       },
-      "stock_basic": "stock_basic",
-      "company_basic": "company_basic"
+      "basic_stock": "basic_stock",
+      "basic_company": "basic_company"
     },
     {
       "market": "stock",
-      "exchange_name": "sz",
+      "exchange_name": "SZSE",
       "currency_pair": "yuan",
       "period": {
-         "stock_basic": "720h",
-         "company_basic": "720h",
+         "stock_basic": "7",
+         "company_basic": "7",
          "trade_daily": "120s"
       },
-      "stock_basic": "stock_basic",
-      "company_basic": "company_basic"
+      "basic_stock": "basic_stock",
+      "basic_company": "basic_company"
     }
   ],
   "store": {

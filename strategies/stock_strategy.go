@@ -1,94 +1,54 @@
 package strategies
 
 import (
-	"log"
-	"os"
-	"regexp"
-	"time"
-	//"encoding/csv"
+   "log"
 
-	"github.com/520lly/qt_data_service/config"
-	"github.com/520lly/qt_data_service/models"
-	"github.com/520lly/qt_data_service/utils"
+   "github.com/520lly/qt_data_service/config"
+   "github.com/520lly/qt_data_service/models"
+   "github.com/jasonlvhit/gocron"
 )
 
 const (
-	EMPTY_FILE_SIZE_MIN int64 = 1000
+   EMPTY_FILE_SIZE_MIN int = 1000
 )
 
-type TsEvent struct {
-	DataFlag  models.DataFlag    `default: models.DataFlag_Stock_Basic`
-	ApiParams *map[string]string `default: nil`
-	CsvFile   *os.File           `default: nil`
-}
+var (
+   TsEvents chan models.DataFlag
+)
 
 type StockStrategy struct {
-	PeriodStockBasic   int64
-	PeriodCompanyBasic int64
-	PeriodDaily        int64
-	TsEvent            chan TsEvent
+   PeriodStockBasic   int
+   PeriodCompanyBasic int
+   PeriodDaily        int
 }
 
-func NewStockStrategy(cfg *config.Config) (stg *StockStrategy) {
-	if cfg == nil {
-		log.Println("cfg is nil")
-		return
-	}
-	tse := make(chan TsEvent)
-	//tse.DataFlag               = models.DataFlag_Stock_Basic
-	//tse.ApiParams              = nil
-
-	return &StockStrategy{
-		PeriodStockBasic:   7,
-		PeriodCompanyBasic: 7,
-		PeriodDaily:        120,
-		TsEvent:            tse,
-	}
+func tsTaskEvent(e models.DataFlag) {
+   log.Printf("tsTaskEvent %d", e)
+   TsEvents<-e
 }
 
-func CheckUpdateBasic(p string, market string, path string) (bool, []string) {
-	var update bool = false
-	err, files := utils.FilteredSearchOfDirectoryTree(market, path)
-	if err == nil {
-		//StockBasic is not exist, need to create it first
-		if len(files) <= 0 {
-			update = true
-		} else { //Means StockBasic file exist, need to Check whether update need or not
-			re := regexp.MustCompile("^.*" + market + "_(.*)\\.csv")
-			log.Println("re = ", re)
-			for _, f := range files {
-				match := re.FindStringSubmatch(f)
-				log.Println("match[1] = ", match[1])
-				if len(match) > 1 {
-					today, ts := utils.GetTodayString("2006-01-02")
-					if ts == match[1] { //the date when the existed file was created was in today, it was just a iniitial file, need to be update
-						log.Println("ts", ts, match[1])
-						size, err := utils.GetFileSize(match[0])
-						log.Printf("err: %v size:%d", err, size)
-						if err == nil {
-							if size < EMPTY_FILE_SIZE_MIN {
-								update = true
-							}
-						}
-					} else {
-						duration, _ := time.ParseDuration(p)
-						created, _ := time.Parse("2006-01-02", match[1])
-						expired := created.Add(duration)
-						if today.After(expired) {
-							log.Printf("created date %v expired date %v is reached", created, expired)
-							update = true
-						} else {
-							log.Printf("created date %v expired date %v is NOT reached", created, expired)
-						}
-					}
-				}
-				break
-			}
-		}
-	}
-	return update, files
+func NewStockStrategy(cfg *config.Config, tse chan models.DataFlag) (stg *StockStrategy) {
+   if cfg == nil {
+      log.Println("cfg is nil")
+      return
+   }
+   log.Printf("TODO finish cfg:%v", *cfg)
+   TsEvents = tse
+
+   sts := &StockStrategy{
+      PeriodStockBasic:   7,
+      PeriodCompanyBasic: 7,
+      PeriodDaily:        120,
+   }
+   s := gocron.NewScheduler()
+   s.Every(7).Days().Do(tsTaskEvent, models.DataFlag_Stock_Basic)
+   s.Every(1).Day().At("15:00").Do(tsTaskEvent, models.DataFlag_Trace_Daily)
+
+   // Start all the pending jobs
+   log.Println("+++++++++++++++++++ gocron.Start ")
+   go func () {
+      <- s.Start()
+   }()
+   return sts
 }
 
-func (sstg *StockStrategy) CheckUpdateDailySingle(code string, start string, end string) {
-
-}

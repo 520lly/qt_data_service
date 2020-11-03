@@ -2,60 +2,74 @@ package collector
 
 import (
 	"log"
-	//"time"
+   "time"
 	"context"
 
 	"github.com/520lly/qt_data_service/clients"
 	"github.com/520lly/qt_data_service/models"
    "github.com/520lly/qt_data_service/storage"
    mycsv"github.com/520lly/qt_data_service/storage/csv"
-	"github.com/520lly/qt_data_service/strategies"
-	//"github.com/520lly/qt_data_service/utils"
 )
 
-func NewTsCollector(ctx *context.Context, c *clients.TsClient, stg *strategies.StockStrategy, store *storage.Storage) {
-   log.Printf("(%s) %s new collector with stg[%v]\n", c.ExchangeName, c.CurrencyPair, stg)
-   if ctx == nil || c == nil || stg == nil || store == nil {
+func NewTsCollector(ctx *context.Context, c *clients.TsClient, tse chan models.TsEvent, store *storage.Storage) {
+   log.Printf("(%s) %s new collector with tse[%v]\n", c.ExchangeName, c.CurrencyPair, tse)
+   if ctx == nil || c == nil || tse == nil || store == nil {
       panic("ctx c stg store are(is) nil!!!")
       return
    }
+	tick := time.NewTicker(time.Second)
    go func() {
-      //tickStockBasic := time.NewTicker(time.Millisecond * time.Duration(period))
-      //tickCompanyBasic := time.NewTicker(time.Millisecond * time.Duration(period))
       sci := &mycsv.StoCsvInstance{nil, nil, nil}
       for {
          select {
+         case <-tick.C:
+            log.Printf("Collector [%s] is in IDLE!", c.ExchangeName)
          case <-(*ctx).Done():
             log.Printf("(%s) %s collector exit\n", c.Market, c.ExchangeName)
             return
-            //case <-tickStockBasic.C:
-            //defer tickStockBasic.Stop()
-            //log.Printf("(%v) collector tickStockBasic.C\n", tickStockBasic.C)
-            //data := c.GetStockBasic()
-            //if data != nil {
-            //store.SaveStockBasic(data)
-            //}
-         case o := <-stg.TsEvent:
+         case o := <-tse:
             switch o.DataFlag {
             case models.DataFlag_Stock_Basic:
-               data := c.GetStockBasic()
-               if data != nil {
-                  (*store).SaveStockBasic(data)
-               }
-            case models.DataFlag_Stock_Company:
-               data := c.GetCompanyBasic()
-               if data != nil {
-                  (*store).SaveCompanyBasic(data)
-               }
-            case models.DataFlag_Trace_Daily:
-               if o.CsvFile != nil {
+               if o.ApiParams != nil {
                   log.Printf("ApiParams: %v\n", o.ApiParams)
-                  data := c.GetTradeDaily(o.ApiParams)
+                  data := c.GetStockBasic(o.ApiParams)
                   if data != nil {
                      sci.DoubleArrayData = data
                      sci.CsvFile = o.CsvFile
                      (*store).SaveData(sci)
                   }
+               } else {
+                  log.Println("FATAL: receive nil csv file writer!")
+               }
+            case models.DataFlag_Stock_Company:
+               if o.ApiParams != nil {
+                  log.Printf("ApiParams: %v\n", o.ApiParams)
+                  data := c.GetCompanyBasic(o.ApiParams)
+                  if data != nil {
+                     sci.DoubleArrayData = data
+                     sci.CsvFile = o.CsvFile
+                     (*store).SaveData(sci)
+                  }
+               } else {
+                  log.Println("FATAL: receive nil csv file writer!")
+               }
+            case models.DataFlag_Trace_Daily:
+               if o.CsvFile != nil {
+                  log.Printf("ApiParams: %v\n", o.ApiParams)
+                  data := c.GetTradeDaily(o.ApiParams, &models.TradeDailyFieldSymbol)
+                  if data != nil {
+                     sci.DoubleArrayData = data
+                     sci.CsvFile = o.CsvFile
+                     (*store).SaveData(sci)
+                  }
+               } else {
+                  log.Println("FATAL: receive nil csv file writer!")
+               }
+            case models.DataFlag_Trace_Calendar:
+               if o.CsvFile != nil {
+
+               } else {
+                  log.Println("FATAL: receive nil csv file writer!")
                }
             default:
             }

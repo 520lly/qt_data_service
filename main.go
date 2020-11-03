@@ -7,14 +7,7 @@ import (
 	"log"
 	"os"
 
-	//"github.com/520lly/qt_data_service/clients"
-	//"github.com/520lly/qt_data_service/collector"
 	"github.com/520lly/qt_data_service/config"
-	//"github.com/520lly/qt_data_service/models"
-	//"github.com/520lly/qt_data_service/storage"
-	//"github.com/520lly/qt_data_service/storage/csv"
-	//"github.com/520lly/qt_data_service/storage/influxdb"
-	//"github.com/520lly/qt_data_service/strategies"
 	"github.com/520lly/qt_data_service/initializer"
 	"github.com/jinzhu/configor"
 
@@ -64,28 +57,6 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	tsc := initializer.TsInit(&ctx, &cfg, home)
 	log.Println("tsc %v\n", tsc)
-
-	//stgs := make(map[string]strategies.StockStrategy)
-	//for _, v := range cfg.Subs {
-	//var sto storage.Storage
-	//if cfg.Store.Csv {
-	//sto = csv.NewCsvStorage(ctx, v.Market, v.ExchangeName, v.CurrencyPair, v.ContractType, v, home, cfg.Store.CsvCfg.Location)
-	//}
-	//if cfg.Store.InfluxDB {
-	//sto = influxdb.NewInfluxdb(ctx, v.ExchangeName, v.CurrencyPair, v.ContractType, cfg.Store.InfluxDbCfg.Url, cfg.Store.InfluxDbCfg.Database, cfg.Store.InfluxDbCfg.Username, cfg.Store.InfluxDbCfg.Password)
-	//}
-	//go sto.SaveWorker()
-	//cl := &clients.TsClient{}
-	//cl = clients.NewTsClient(v.Market, v.ExchangeName, v.CurrencyPair, cfg.Tokens.TuShare)
-	//stg := strategies.NewStockStrategy(&cfg)
-	//stgs[v.ExchangeName] = stg
-	//// TODO Initializing collector worker
-	//collector.NewTsCollector(ctx, cl, stg, sto)
-	//}
-	//stgs["sh"].TsEvent <- models.DataFlag_Stock_Basic
-	//stgs["sz"].TsEvent <- models.DataFlag_Stock_Basic
-	//stgs["sh"].TsEvent <- models.DataFlag_Stock_Company
-	//stgs["sz"].TsEvent <- models.DataFlag_Stock_Company
 
 	exitSignal := make(chan os.Signal, 1)
 	sigs := []os.Signal{os.Interrupt, syscall.SIGILL, syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGTERM}

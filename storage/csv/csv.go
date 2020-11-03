@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
+   //"strings"
 	"time"
+   "strconv"
 
 	"github.com/520lly/qt_data_service/config"
 	"github.com/520lly/qt_data_service/models"
@@ -23,145 +24,221 @@ type StoCsvInstance struct {
 	CsvFile         *os.File
 }
 
+type BasicCsvFileInfo struct {
+   FullPath string
+   LastModified string
+   NextUpdate string
+}
+
 type CsvStorage struct {
-	//market           string
-	//exchangeName     string
-	//pair             string
-	//contractType     string
 	sci    chan StoCsvInstance
 	sub    config.Subscribe
 	store  config.Storage
 	prefix string
-	//outputPath       string
 	fullPath         string
-	saveStockBasic   chan [][]interface{}
-	saveCompanyBasic chan [][]interface{}
-	fileTimestamp    time.Time
-	ctx              context.Context
-	basicFile        *os.File
-	basicCsv         *csv.Writer
-	companyFile      *os.File
-	companyCsv       *csv.Writer
+	//saveStockBasic   chan [][]interface{}
+	//saveCompanyBasic chan [][]interface{}
+	//fileTimestamp    time.Time
+   files            *map[string]BasicCsvFileInfo
+   ctx              context.Context
+	//basicFile        *os.File
+	//basicCsv         *csv.Writer
+	//companyFile      *os.File
+	//companyCsv       *csv.Writer
 }
 
 func NewCsvStorage(
 	ctx context.Context,
 	store config.Storage,
-	//market string,
-	//exchangeName string,
-	//pair string,
-	//contractType string,
 	sub config.Subscribe,
 	prefix string,
-	//outputPath string,
 ) *CsvStorage {
-	var saveStockBasic chan [][]interface{}
-	var saveCompanyBasic chan [][]interface{}
-	var basicFile *os.File
-	var basicCsv *csv.Writer
-	var companyFile *os.File
-	var companyCsv *csv.Writer
+   //var saveStockBasic chan [][]interface{}
+   //var saveCompanyBasic chan [][]interface{}
+   //var basicFile *os.File
+   //var basicCsv *csv.Writer
+   //var companyFile *os.File
+   //var companyCsv *csv.Writer
 
-	fileTimestamp := time.Now()
-	ts := fileTimestamp.Format("2006-01-02")
-	isNew := false
+   //fileTimestamp := time.Now()
+   //ts := fileTimestamp.Format("2006-01-02")
+   //isNew := false
 
-	root := prefix + "/" + store.CsvCfg.Location + "/" + sub.Market + "/" + sub.ExchangeName
-	ret, _ := utils.EnsurePathExist(root)
-	if ret == false {
-		panic("path was not exist!")
-	}
-	log.Printf("%s exist!", root)
+   root := prefix + "/" + store.CsvCfg.Location + "/" + sub.Market + "/" + sub.ExchangeName
+   //filesList := InitCsvWorkspace(root, sub)
 
-	history := root + "/" + store.CsvCfg.History
-	ret, _ = utils.EnsurePathExist(history)
-	if ret == false {
-		panic("path was not exist!")
-	}
-	log.Printf("%s exist!", history)
+   //ret, _ := utils.EnsurePathExist(root)
+   //if ret == false {
+      //panic("path was not exist and create failed!")
+   //}
+   //log.Printf("%s exist!", root)
 
-	isNew, basicFile = utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.StockBasic, ts))
-   basicCsv = csv.NewWriter(basicFile)
-	if isNew {
-		utils.WriteData2CsvFile(basicFile, models.FieldSymbol)
-	}
-	saveStockBasic = make(chan [][]interface{})
+   //history := root + "/" + store.CsvCfg.History
+   //ret, _ = utils.EnsurePathExist(history)
+   //if ret == false {
+      //panic("path was not exist!")
+   //}
+   //log.Printf("%s exist!", history)
 
-	isNew, companyFile = utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.CompanyBasic, ts))
-   companyCsv = csv.NewWriter(companyFile)
-	if isNew {
-		utils.WriteData2CsvFile(companyFile, models.CompanyFieldSymbol)
-	}
-	saveCompanyBasic = make(chan [][]interface{})
+   //isNew, basicFile = utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.StockBasic, ts))
+   //basicCsv = csv.NewWriter(basicFile)
+   //if isNew {
+      //utils.WriteData2CsvFile(basicFile, models.StockFieldSymbol)
+   //}
+   //saveStockBasic = make(chan [][]interface{})
 
-	sci := make(chan StoCsvInstance)
+   //isNew, companyFile = utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.CompanyBasic, ts))
+   //companyCsv = csv.NewWriter(companyFile)
+   //if isNew {
+      //utils.WriteData2CsvFile(companyFile, models.CompanyFieldSymbol)
+   //}
+   //saveCompanyBasic = make(chan [][]interface{})
 
-	return &CsvStorage{
-		ctx: ctx,
-		//market:           sub.Market,
-		//exchangeName:     sub.ExchangeName,
-		//pair:             sub.CurrencyPair,
-		//contractType:     sub.ContractType,
-		sci:    sci,
-		sub:    sub,
-		store:  store,
-		prefix: prefix,
-		//outputPath:       outputPath,
-		fullPath:         root,
-		fileTimestamp:    fileTimestamp,
-		saveStockBasic:   saveStockBasic,
-		basicFile:        basicFile,
-      basicCsv:         basicCsv,
-      saveCompanyBasic: saveCompanyBasic,
-		companyFile:      companyFile,
-      companyCsv:       companyCsv,
-	}
+   sci := make(chan StoCsvInstance)
+
+   csvSto := &CsvStorage{
+      ctx:              ctx,
+      sci:              sci,
+      sub:              sub,
+      store:            store,
+      prefix:           prefix,
+      fullPath:         root,
+      files:            nil,
+   }
+   csvSto.InitCsvWorkspace(root, sub)
+
+   return csvSto
 }
 
-func (s *CsvStorage) SaveStockBasic(items *[][]interface{}) {
-	if s.saveStockBasic == nil {
-		return
-	}
-	s.saveStockBasic <- *items
+func (c *CsvStorage) InitCsvWorkspace(root string, sub config.Subscribe) {
+   ret, _ := utils.EnsurePathExist(root)
+   if ret == false {
+      panic("path was not exist and create failed!")
+   }
+   log.Printf("%s exist!", root)
+
+   history := root + "/history"
+   ret, _ = utils.EnsurePathExist(history)
+   if ret == false {
+      panic("path was not exist and create failed!")
+   }
+   log.Printf("%s exist!", history)
+
+   _, ts := utils.GetTodayString(utils.DateFormat2)
+   var basicPat string = `basic_[a-z]{2,}\.csv`
+   fileMap := make(map[string]BasicCsvFileInfo)
+   err, files := utils.FilteredSearchOfDirectoryTree(basicPat, root) 
+   if err == nil && len(files) >=1 {
+      log.Printf("InitCsvWorkspace files:%v", files)
+      for _, f := range files {
+         if utils.IsFileSameFromFullPath(sub.StockBasic, f) {
+            log.Printf("------- pat:%s matchs f:%s", sub.StockBasic, f)
+            updatedate := utils.GetLastModifyTime(f)
+            csvInfo := BasicCsvFileInfo{f,updatedate,""}
+            i, err := strconv.Atoi(sub.Period.StockBasic) 
+            if err == nil {
+               nextupdatedate := utils.AddDays2Date(utils.DateFormat2, updatedate, 0, 0 , i)
+               csvInfo.NextUpdate = nextupdatedate
+            }
+            fileMap[sub.StockBasic] = csvInfo
+         } else {
+            //isNew, basicFile := utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.StockBasic, ts))
+            isNew, fp := utils.OpenCsvFile(fmt.Sprintf("%s/%s.csv", root, sub.StockBasic))
+            if isNew {
+               utils.WriteData2CsvFile(fp, models.StockFieldSymbol)
+               fileMap[sub.StockBasic] = BasicCsvFileInfo{fmt.Sprintf("%s/%s.csv", root, sub.StockBasic), ts, ts}
+               fp.Close()
+            }
+         }
+
+         //p2 := strings.Split(sub.CompanyBasic, f)
+         //log.Printf("p2:%s", p2)
+         //if len(p2) >=1 {
+         if utils.IsFileSameFromFullPath(sub.CompanyBasic, f) {
+            log.Printf("------- pat:%s matchs f:%s", sub.CompanyBasic, f)
+            updatedate := utils.GetLastModifyTime(f)
+            csvInfo := BasicCsvFileInfo{f,updatedate,""}
+            i, err := strconv.Atoi(sub.Period.CompanyBasic) 
+            if err == nil {
+               nextupdatedate := utils.AddDays2Date(utils.DateFormat2, updatedate, 0, 0 , i)
+               csvInfo.NextUpdate = nextupdatedate
+            }
+            fileMap[sub.CompanyBasic] = csvInfo
+         } else {
+            //isNew, companyFile := utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.CompanyBasic, ts))
+            log.Printf("pat:%s not matched", sub.CompanyBasic)
+            isNew, fp := utils.OpenCsvFile(fmt.Sprintf("%s/%s.csv", root, sub.CompanyBasic))
+            if isNew {
+               utils.WriteData2CsvFile(fp, models.CompanyFieldSymbol)
+               fileMap[sub.CompanyBasic] = BasicCsvFileInfo{fmt.Sprintf("%s/%s.csv", root, sub.CompanyBasic), ts, ts}
+               fp.Close()
+            }
+         }
+
+         //More to be defined
+      }
+   } else {
+      isNew, fp := utils.OpenCsvFile(fmt.Sprintf("%s/%s.csv", root, sub.StockBasic))
+      if isNew {
+         utils.WriteData2CsvFile(fp, models.StockFieldSymbol)
+         fileMap[sub.StockBasic] = BasicCsvFileInfo{fmt.Sprintf("%s/%s.csv", root, sub.StockBasic), ts, ts}
+         fp.Close()
+      }
+
+      isNew, fp = utils.OpenCsvFile(fmt.Sprintf("%s/%s.csv", root, sub.CompanyBasic))
+      if isNew {
+         utils.WriteData2CsvFile(fp, models.CompanyFieldSymbol)
+         fileMap[sub.CompanyBasic] = BasicCsvFileInfo{fmt.Sprintf("%s/%s.csv", root, sub.CompanyBasic), ts, ts}
+         fp.Close()
+      }
+   }
+   c.files = &fileMap
+   log.Println(fileMap)
+   //return &fileMap
 }
 
-func (s *CsvStorage) SaveCompanyBasic(items *[][]interface{}) {
-	if s.saveCompanyBasic == nil {
-		return
-	}
-	s.saveCompanyBasic <- *items
-}
+//func (s *CsvStorage) SaveStockBasic(items *[][]interface{}) {
+	//if s.saveStockBasic == nil {
+		//return
+	//}
+	//s.saveStockBasic <- *items
+//}
+
+//func (s *CsvStorage) SaveCompanyBasic(items *[][]interface{}) {
+	//if s.saveCompanyBasic == nil {
+		//return
+	//}
+	//s.saveCompanyBasic <- *items
+//}
 
 func (s *CsvStorage) SaveData(sci *StoCsvInstance) {
 	if sci == nil {
 		return
 	}
 	s.sci <- *sci
-	log.Printf("save data [%v]\n", sci)
-}
-
-//func (s *CsvStorage) GetStoCsvInstance() *StoCsvInstance {
-//return s.sci
-//}
-
-func (s *CsvStorage) UpdateStoCsvInstance(da_data *[][]interface{}, sa_data *[]interface{}, csvw *os.File) {
-	//s.sci.DoubleArrayData = da_data
-	//s.sci.SingleArrayData = sa_data
-	//s.sci.CsvFile =  csvw
-
+	//log.Printf("save data [%v]\n", sci)
 }
 
 func (s *CsvStorage) GetFullPath() string {
 	return s.fullPath
 }
+
 func (s *CsvStorage) GetSubscribe() config.Subscribe {
 	return s.sub
 }
 
+func (s *CsvStorage) GetBasicFile(pat string) (BasicCsvFileInfo, bool) {
+   val, ok := (*s.files)[pat]
+   log.Printf("files:%v", (*s.files))
+   log.Printf("pat:%s val:%v, ok:%t", pat, val, ok)
+   return val, ok
+}
+
 func (s *CsvStorage) Close() {
-	if s.basicFile != nil {
-		s.basicFile.Close()
-	}
+   log.Println("empty")
+	//if s.basicFile != nil {
+		//s.basicFile.Close()
+	//}
 	//close(s.saveDepthChan)
 	//close(s.saveTickerChan)
 	//close(s.saveKlineChan)
@@ -190,36 +267,12 @@ func (s *CsvStorage) compress(fileTimestamp time.Time) {
 	}
 }
 
-func (s *CsvStorage) reNewFile() {
-	now := time.Now()
-	if now.Day() == s.fileTimestamp.Day() {
-		return
-	}
-	s.Close()
-	log.Printf("now day:%d, file timestamp day:%d", now.Day(), s.fileTimestamp.Day())
-	go s.compress(s.fileTimestamp)
-
-	s.fileTimestamp = now
-
-	//ts := s.fileTimestamp.Format("2006-01-02")
-	//isNew := false
-
-	//isNew, s.basicFile = utils.OpenCsvFile(fmt.Sprintf("%s/basic_%s.csv", s.fullPath, ts))
-	//s.basicCsv = csv.NewWriter(s.basicFile)
-	//if isNew {
-		//data := models.FieldSymbol
-		//s.basicCsv.Write(data)
-		//s.basicCsv.Flush()
-	//}
-}
-
 func (s *CsvStorage) SaveWorker() {
 	tick := time.NewTicker(time.Second)
 	for {
 		select {
 		case <-tick.C:
-			//s.reNewFile()
-			log.Println("tick.C")
+         log.Printf("SaveWorker [%S] is in IDLE!", s.sub.ExchangeName)
 		case o := <-s.sci:
 			log.Printf("o.CsvFile: %v", o.CsvFile)
 			if o.CsvFile != nil {
@@ -236,35 +289,6 @@ func (s *CsvStorage) SaveWorker() {
 				csvw.Flush()
 				o.CsvFile.Close()
 			}
-		case o := <-s.saveStockBasic:
-			//empty old file
-			//WriteData2CsvFile(companyCsv, models.CompanyFieldSymbol)
-			for _, item := range o {
-				ss := strings.Split(fmt.Sprintf("%s", item[0]), ".")
-				if strings.ToUpper(s.sub.ExchangeName) == ss[1] {
-					var data []string
-					for _, f := range item {
-						data = append(data, fmt.Sprintf("%v", f))
-					}
-					s.basicCsv.Write(data)
-				}
-			}
-			s.basicCsv.Flush()
-
-		case o := <-s.saveCompanyBasic:
-			//empty old file
-			for _, item := range o {
-				ss := strings.Split(fmt.Sprintf("%s", item[0]), ".")
-				if strings.ToUpper(s.sub.ExchangeName) == ss[1] {
-					var data []string
-					for _, f := range item {
-						data = append(data, fmt.Sprintf("%v", f))
-					}
-					s.companyCsv.Write(data)
-				}
-			}
-			s.companyCsv.Flush()
-
 		case <-s.ctx.Done():
 			s.Close()
 			log.Printf("(%s) %s saveWorker exit\n", s.sub.ExchangeName, s.sub.CurrencyPair)

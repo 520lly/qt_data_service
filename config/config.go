@@ -13,8 +13,8 @@ type Subscribe struct {
 		TradeDaily   string `json:"trade_daily" yaml:"trade_daily" default:"120"`
 	}
 	Flag         models.DataFlag `json:"flag" yaml:"flag" default:"1"`
-	StockBasic   string          `json:"stock_basic" yaml:"stock_basic" default:"stock_basic"`
-	CompanyBasic string          `json:"company_basic" yaml:"company_basic" default:"company_basic"`
+	StockBasic   string          `json:"basic_stock" yaml:"basic_stock" default:"basic_stock"`
+	CompanyBasic string          `json:"basic_company" yaml:"basic_company" default:"basic_company"`
 }
 
 type Storage struct {
