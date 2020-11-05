@@ -54,6 +54,7 @@ func main() {
 	}
 	home = os.Getenv("HOME")
 
+   //Create a context that can be cancelled
 	ctx, cancel := context.WithCancel(context.Background())
 	tsc := initializer.TsInit(&ctx, &cfg, home)
 	log.Println("tsc %v\n", tsc)
@@ -62,6 +63,7 @@ func main() {
 	sigs := []os.Signal{os.Interrupt, syscall.SIGILL, syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGTERM}
 	signal.Notify(exitSignal, sigs...)
 	<-exitSignal
+   //Invoke cancel when process will quit
 	cancel()
 	time.Sleep(time.Second)
 	log.Println("quantitative data collector exit")

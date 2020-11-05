@@ -60,7 +60,6 @@ const (
 )
 
 var BasicFileNames = []string{StockBasic, CompanyBasic, TradeCalendar}
-
 func (s DataFlag) String() (sym string) {
 	if s > 0 && int(s) <= len(BasicFileNames) {
 		return BasicFileNames[s-1]
@@ -70,7 +69,6 @@ func (s DataFlag) String() (sym string) {
 
 
 var StockFieldSymbol = []string{"ts_code", "symbol", "name", "area", "industry", "fullname", "market", "exchange", "curr_type", "list_status", "list_date", "delist_date", "is_hs"}
-
 //func (s FieldStockBasic) String() (sym string) {
 	//if s > 0 && int(s) <= len(FieldSymbol) {
 		//return FieldSymbol[s-1]
@@ -82,3 +80,5 @@ var CompanyFieldSymbol = []string{"ts_code", "exchange", "chairman", "manager", 
 
 var TradeDailyFieldSymbol = []string{"ts_code", "trade_date", "open", "high", "low", "close", "pre_close", "change", "pct_chg", "vol", "amount"}
 var TradeCalendarFieldSymbol = []string{"exchange", "cal_date", "is_open", "pretrade_date"}
+var NameChangeFieldSymbol = []string{"ts_code", "name", "start_date", "end_date", "ann_date", "change_reason"}
+var HsConstFieldSymbol = []string{"ts_code", "hs_type", "in_date", "out_date", "is_new" }

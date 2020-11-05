@@ -1,45 +1,49 @@
 {
-  "subs": [
-    {
-      "market": "stock",
-      "exchange_name": "SSE",
-      "currency_pair": "yuan",
-      "period": {
-         "stock_basic": "7",
-         "company_basic": "7",
-         "trade_daily": "120s"
+   "subs": [
+      {
+         "market": "stock",
+         "exchange_name": "SSE",
+         "currency_pair": "yuan",
+         "period": {
+            "stock_basic": "7",
+            "company_basic": "7",
+            "trade_daily": "120s"
+         },
+         "basic_stock": "basic_stock",
+         "basic_company": "basic_company",
+         "basic_trade_cal": "basic_trade_cal",
+         "basic_name_his": "basic_name_his"
       },
-      "basic_stock": "basic_stock",
-      "basic_company": "basic_company"
-    },
-    {
-      "market": "stock",
-      "exchange_name": "SZSE",
-      "currency_pair": "yuan",
-      "period": {
-         "stock_basic": "7",
-         "company_basic": "7",
-         "trade_daily": "120s"
+      {
+         "market": "stock",
+         "exchange_name": "SZSE",
+         "currency_pair": "yuan",
+         "period": {
+            "stock_basic": "7",
+            "company_basic": "7",
+            "trade_daily": "120s"
+         },
+         "basic_stock": "basic_stock",
+         "basic_company": "basic_company",
+         "basic_trade_cal": "basic_trade_cal",
+         "basic_name_his": "basic_name_his"
+      }
+   ],
+   "store": {
+      "csv": true,
+      "csv_cfg": {
+         "location": "qt_data",
+         "history": "history"
       },
-      "basic_stock": "basic_stock",
-      "basic_company": "basic_company"
-    }
-  ],
-  "store": {
-    "csv": true,
-    "csv_cfg": {
-      "location": "qt_data",
-      "history": "history"
-    },
-    "influx_db": false,
-    "influx_db_cfg": {
-      "url": "http://localhost:8086",
-      "database": "market_data"
-    }
-  },
-  "tokens": {
-     "tushare": "10cafcdb62679fd8741b2527cab71235b14cc7d8f4075832829c804c"
-  },
-  "with_market_center": false,
-  "market_center_path": "/tmp/goex.market.center"
+      "influx_db": false,
+      "influx_db_cfg": {
+         "url": "http://localhost:8086",
+         "database": "market_data"
+      }
+   },
+   "tokens": {
+      "tushare": "10cafcdb62679fd8741b2527cab71235b14cc7d8f4075832829c804c"
+   },
+   "with_market_center": false,
+   "market_center_path": "/tmp/goex.market.center"
 }

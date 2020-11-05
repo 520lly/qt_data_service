@@ -53,47 +53,8 @@ func NewCsvStorage(
 	sub config.Subscribe,
 	prefix string,
 ) *CsvStorage {
-   //var saveStockBasic chan [][]interface{}
-   //var saveCompanyBasic chan [][]interface{}
-   //var basicFile *os.File
-   //var basicCsv *csv.Writer
-   //var companyFile *os.File
-   //var companyCsv *csv.Writer
-
-   //fileTimestamp := time.Now()
-   //ts := fileTimestamp.Format("2006-01-02")
-   //isNew := false
 
    root := prefix + "/" + store.CsvCfg.Location + "/" + sub.Market + "/" + sub.ExchangeName
-   //filesList := InitCsvWorkspace(root, sub)
-
-   //ret, _ := utils.EnsurePathExist(root)
-   //if ret == false {
-      //panic("path was not exist and create failed!")
-   //}
-   //log.Printf("%s exist!", root)
-
-   //history := root + "/" + store.CsvCfg.History
-   //ret, _ = utils.EnsurePathExist(history)
-   //if ret == false {
-      //panic("path was not exist!")
-   //}
-   //log.Printf("%s exist!", history)
-
-   //isNew, basicFile = utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.StockBasic, ts))
-   //basicCsv = csv.NewWriter(basicFile)
-   //if isNew {
-      //utils.WriteData2CsvFile(basicFile, models.StockFieldSymbol)
-   //}
-   //saveStockBasic = make(chan [][]interface{})
-
-   //isNew, companyFile = utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.CompanyBasic, ts))
-   //companyCsv = csv.NewWriter(companyFile)
-   //if isNew {
-      //utils.WriteData2CsvFile(companyFile, models.CompanyFieldSymbol)
-   //}
-   //saveCompanyBasic = make(chan [][]interface{})
-
    sci := make(chan StoCsvInstance)
 
    csvSto := &CsvStorage{
@@ -125,14 +86,15 @@ func (c *CsvStorage) InitCsvWorkspace(root string, sub config.Subscribe) {
    log.Printf("%s exist!", history)
 
    _, ts := utils.GetTodayString(utils.DateFormat2)
-   var basicPat string = `basic_[a-z]{2,}\.csv`
+   var basicPat string = `basic_[a-z]{2,}.*\.csv`
    fileMap := make(map[string]BasicCsvFileInfo)
    err, files := utils.FilteredSearchOfDirectoryTree(basicPat, root) 
    if err == nil && len(files) >=1 {
       log.Printf("InitCsvWorkspace files:%v", files)
       for _, f := range files {
+         // Check StockBasic
          if utils.IsFileSameFromFullPath(sub.StockBasic, f) {
-            log.Printf("------- pat:%s matchs f:%s", sub.StockBasic, f)
+            //log.Printf("------- pat:%s matchs f:%s", sub.StockBasic, f)
             updatedate := utils.GetLastModifyTime(f)
             csvInfo := BasicCsvFileInfo{f,updatedate,""}
             i, err := strconv.Atoi(sub.Period.StockBasic) 
@@ -142,7 +104,6 @@ func (c *CsvStorage) InitCsvWorkspace(root string, sub config.Subscribe) {
             }
             fileMap[sub.StockBasic] = csvInfo
          } else {
-            //isNew, basicFile := utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.StockBasic, ts))
             isNew, fp := utils.OpenCsvFile(fmt.Sprintf("%s/%s.csv", root, sub.StockBasic))
             if isNew {
                utils.WriteData2CsvFile(fp, models.StockFieldSymbol)
@@ -151,11 +112,9 @@ func (c *CsvStorage) InitCsvWorkspace(root string, sub config.Subscribe) {
             }
          }
 
-         //p2 := strings.Split(sub.CompanyBasic, f)
-         //log.Printf("p2:%s", p2)
-         //if len(p2) >=1 {
+         // Check CompanyBasic
          if utils.IsFileSameFromFullPath(sub.CompanyBasic, f) {
-            log.Printf("------- pat:%s matchs f:%s", sub.CompanyBasic, f)
+            //log.Printf("------- pat:%s matchs f:%s", sub.CompanyBasic, f)
             updatedate := utils.GetLastModifyTime(f)
             csvInfo := BasicCsvFileInfo{f,updatedate,""}
             i, err := strconv.Atoi(sub.Period.CompanyBasic) 
@@ -165,12 +124,54 @@ func (c *CsvStorage) InitCsvWorkspace(root string, sub config.Subscribe) {
             }
             fileMap[sub.CompanyBasic] = csvInfo
          } else {
-            //isNew, companyFile := utils.OpenCsvFile(fmt.Sprintf("%s/%s_%s.csv", root, sub.CompanyBasic, ts))
-            log.Printf("pat:%s not matched", sub.CompanyBasic)
+            //log.Printf("pat:%s not matched", sub.CompanyBasic)
             isNew, fp := utils.OpenCsvFile(fmt.Sprintf("%s/%s.csv", root, sub.CompanyBasic))
             if isNew {
                utils.WriteData2CsvFile(fp, models.CompanyFieldSymbol)
                fileMap[sub.CompanyBasic] = BasicCsvFileInfo{fmt.Sprintf("%s/%s.csv", root, sub.CompanyBasic), ts, ts}
+               fp.Close()
+            }
+         }
+
+         // Check TradeCal
+         if utils.IsFileSameFromFullPath(sub.TradeCal, f) {
+            //log.Printf("------- pat:%s matchs f:%s", sub.TradeCal, f)
+            updatedate := utils.GetLastModifyTime(f)
+            csvInfo := BasicCsvFileInfo{f,updatedate,""}
+            i, err := strconv.Atoi(sub.Period.TradeDaily)  //Daily as default
+            if err == nil {
+               nextupdatedate := utils.AddDays2Date(utils.DateFormat2, updatedate, 0, 0 , i)
+               csvInfo.NextUpdate = nextupdatedate
+            }
+            fileMap[sub.TradeCal] = csvInfo
+         } else {
+            //log.Printf("pat:%s not matched", sub.TradeCal)
+            nfile := fmt.Sprintf("%s/%s.csv", root, sub.TradeCal)
+            isNew, fp := utils.OpenCsvFile(nfile)
+            if isNew {
+               utils.WriteData2CsvFile(fp, models.TradeCalendarFieldSymbol)
+               fileMap[sub.TradeCal] = BasicCsvFileInfo{nfile, ts, ts}
+               fp.Close()
+            }
+         }
+
+         // Check Name Change History
+         if utils.IsFileSameFromFullPath(sub.NameChangeHistory, f) {
+            //log.Printf("------- pat:%s matchs f:%s", sub.NameChangeHistory, f)
+            updatedate := utils.GetLastModifyTime(f)
+            csvInfo := BasicCsvFileInfo{f,updatedate,""}
+            i, err := strconv.Atoi(sub.Period.StockBasic)  //Weekly as default same as Stock list
+            if err == nil {
+               nextupdatedate := utils.AddDays2Date(utils.DateFormat2, updatedate, 0, 0 , i)
+               csvInfo.NextUpdate = nextupdatedate
+            }
+            fileMap[sub.NameChangeHistory] = csvInfo
+         } else {
+            nfile := fmt.Sprintf("%s/%s.csv", root, sub.NameChangeHistory)
+            isNew, fp := utils.OpenCsvFile(nfile)
+            if isNew {
+               utils.WriteData2CsvFile(fp, models.NameChangeFieldSymbol)
+               fileMap[sub.NameChangeHistory] = BasicCsvFileInfo{nfile, ts, ts}
                fp.Close()
             }
          }
@@ -183,6 +184,7 @@ func (c *CsvStorage) InitCsvWorkspace(root string, sub config.Subscribe) {
          utils.WriteData2CsvFile(fp, models.StockFieldSymbol)
          fileMap[sub.StockBasic] = BasicCsvFileInfo{fmt.Sprintf("%s/%s.csv", root, sub.StockBasic), ts, ts}
          fp.Close()
+         fp = nil
       }
 
       isNew, fp = utils.OpenCsvFile(fmt.Sprintf("%s/%s.csv", root, sub.CompanyBasic))
@@ -190,33 +192,36 @@ func (c *CsvStorage) InitCsvWorkspace(root string, sub config.Subscribe) {
          utils.WriteData2CsvFile(fp, models.CompanyFieldSymbol)
          fileMap[sub.CompanyBasic] = BasicCsvFileInfo{fmt.Sprintf("%s/%s.csv", root, sub.CompanyBasic), ts, ts}
          fp.Close()
+         fp = nil
       }
+
+      isNew, fp = utils.OpenCsvFile(fmt.Sprintf("%s/%s.csv", root, sub.TradeCal))
+      if isNew {
+         utils.WriteData2CsvFile(fp, models.TradeCalendarFieldSymbol)
+         fileMap[sub.TradeCal] = BasicCsvFileInfo{fmt.Sprintf("%s/%s.csv", root, sub.TradeCal), ts, ts}
+         fp.Close()
+         fp = nil
+      }
+
+      isNew, fp = utils.OpenCsvFile(fmt.Sprintf("%s/%s.csv", root, sub.NameChangeHistory))
+      if isNew {
+         utils.WriteData2CsvFile(fp, models.NameChangeFieldSymbol)
+         fileMap[sub.NameChangeHistory] = BasicCsvFileInfo{fmt.Sprintf("%s/%s.csv", root, sub.NameChangeHistory), ts, ts}
+         fp.Close()
+         fp = nil
+      }
+      //More to be defined
+
    }
    c.files = &fileMap
    log.Println(fileMap)
-   //return &fileMap
 }
 
-//func (s *CsvStorage) SaveStockBasic(items *[][]interface{}) {
-	//if s.saveStockBasic == nil {
-		//return
-	//}
-	//s.saveStockBasic <- *items
-//}
-
-//func (s *CsvStorage) SaveCompanyBasic(items *[][]interface{}) {
-	//if s.saveCompanyBasic == nil {
-		//return
-	//}
-	//s.saveCompanyBasic <- *items
-//}
-
 func (s *CsvStorage) SaveData(sci *StoCsvInstance) {
-	if sci == nil {
-		return
-	}
-	s.sci <- *sci
-	//log.Printf("save data [%v]\n", sci)
+   if sci == nil {
+      return
+   }
+   s.sci <- *sci
 }
 
 func (s *CsvStorage) GetFullPath() string {
@@ -272,7 +277,7 @@ func (s *CsvStorage) SaveWorker() {
 	for {
 		select {
 		case <-tick.C:
-         log.Printf("SaveWorker [%S] is in IDLE!", s.sub.ExchangeName)
+         log.Printf("SaveWorker [%s] is in IDLE!", s.sub.ExchangeName)
 		case o := <-s.sci:
 			log.Printf("o.CsvFile: %v", o.CsvFile)
 			if o.CsvFile != nil {

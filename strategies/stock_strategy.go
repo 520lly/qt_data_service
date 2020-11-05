@@ -42,7 +42,7 @@ func NewStockStrategy(cfg *config.Config, tse chan models.DataFlag) (stg *StockS
    }
    s := gocron.NewScheduler()
    s.Every(7).Days().Do(tsTaskEvent, models.DataFlag_Stock_Basic)
-   s.Every(1).Day().At("15:00").Do(tsTaskEvent, models.DataFlag_Trace_Daily)
+   s.Every(1).Day().At("15:00").Do(tsTaskEvent, models.DataFlag_Trade_Daily)
 
    // Start all the pending jobs
    log.Println("+++++++++++++++++++ gocron.Start ")

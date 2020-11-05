@@ -10,8 +10,10 @@ const (
 	_ DataFlag = iota
 	DataFlag_Stock_Basic
 	DataFlag_Stock_Company
-	DataFlag_Trace_Daily
-	DataFlag_Trace_Calendar
+	DataFlag_Trade_Daily
+	DataFlag_Trade_Calendar
+	DataFlag_NameChange_Histtory
+	DataFlag_Hs_Const
 )
 
 

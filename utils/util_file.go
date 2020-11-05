@@ -1,9 +1,9 @@
 package utils
 
 import (
-    "bufio"
+    //"bufio"
     "encoding/csv"
-    "io"
+    //"io"
     "log"
     "os"
     "path/filepath"
@@ -79,6 +79,7 @@ func OpenCsvFile(fileName string) (bool, *os.File) {
 
    if CheckFileIsExist(fileName) {
       file, err1 = os.OpenFile(fileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, 666)
+      //file, err1 = os.OpenFile(fileName, os.O_CREATE|os.O_APPEND|os.O_RDWR|os.O_TRUNC, 666)
    } else {
       file, err1 = os.Create(fileName)
       file.WriteString("\xEF\xBB\xBF") //for writing Chinese to csv file
@@ -91,34 +92,19 @@ func OpenCsvFile(fileName string) (bool, *os.File) {
    return isNew, file
 }
 
+func EmptyCsvFileContentWithHeader(fp *os.File, data []string) {
+   var empty []string
+   WriteData2CsvFile(fp, empty)
+   WriteData2CsvFile(fp, data)
+}
+
 func WriteData2CsvFile(fp *os.File, data []string) {
    if fp == nil {
       return
    }
-   //data := models.FieldSymbol
    csvw := csv.NewWriter(fp)
    csvw.Write(data)
    csvw.Flush()
-}
-
-func SeekToLine(r io.Reader, lineNo int) (line []byte, offset int, err error) {
-    s := bufio.NewScanner(r)
-    var pos int
-
-    s.Split(func(data []byte, atEof bool) (advance int, token []byte, err error) {
-        advance, token, err = bufio.ScanLines(data, atEof)
-        pos += advance
-        return advance, token, err
-    })
-
-    for i := 0; i < lineNo; i++ {
-        offset = pos
-        if !s.Scan() {
-            return nil, 0, io.EOF
-        }
-    }
-
-    return s.Bytes(), pos, nil
 }
 
 func RenameFile(o string, n string) error {
@@ -137,3 +123,12 @@ func GetLastModifyTime(f string) string {
    modifiedtime := file.ModTime().Format(DateFormat2)
    return modifiedtime
 }
+
+//func SeekToLastLine(fp *os.File) ([]string, pos, error) {
+   //if fp == nil {
+      //return
+   //}
+   //csvr := csv.NewReader(fp)
+
+//}
+

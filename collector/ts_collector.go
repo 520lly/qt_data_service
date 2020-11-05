@@ -53,7 +53,7 @@ func NewTsCollector(ctx *context.Context, c *clients.TsClient, tse chan models.T
                } else {
                   log.Println("FATAL: receive nil csv file writer!")
                }
-            case models.DataFlag_Trace_Daily:
+            case models.DataFlag_Trade_Daily:
                if o.CsvFile != nil {
                   log.Printf("ApiParams: %v\n", o.ApiParams)
                   data := c.GetTradeDaily(o.ApiParams, &models.TradeDailyFieldSymbol)
@@ -65,9 +65,27 @@ func NewTsCollector(ctx *context.Context, c *clients.TsClient, tse chan models.T
                } else {
                   log.Println("FATAL: receive nil csv file writer!")
                }
-            case models.DataFlag_Trace_Calendar:
+            case models.DataFlag_Trade_Calendar:
                if o.CsvFile != nil {
-
+                  log.Printf("ApiParams: %v\n", o.ApiParams)
+                  data := c.GetTradeCalender(o.ApiParams)
+                  if data != nil {
+                     sci.DoubleArrayData = data
+                     sci.CsvFile = o.CsvFile
+                     (*store).SaveData(sci)
+                  }
+               } else {
+                  log.Println("FATAL: receive nil csv file writer!")
+               }
+            case models.DataFlag_NameChange_Histtory:
+               if o.CsvFile != nil {
+                  log.Printf("ApiParams: %v\n", o.ApiParams)
+                  data := c.GetNameChangeHistory(o.ApiParams)
+                  if data != nil {
+                     sci.DoubleArrayData = data
+                     sci.CsvFile = o.CsvFile
+                     (*store).SaveData(sci)
+                  }
                } else {
                   log.Println("FATAL: receive nil csv file writer!")
                }

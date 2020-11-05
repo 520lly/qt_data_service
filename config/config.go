@@ -1,6 +1,8 @@
 package config
 
-import "github.com/520lly/qt_data_service/models"
+import (
+   //"github.com/520lly/qt_data_service/models"
+)
 
 type Subscribe struct {
 	Market       string `json:"market" yaml:"market" default:""`
@@ -11,10 +13,12 @@ type Subscribe struct {
 		StockBasic   string `json:"stock_basic" yaml:"stock_basic" default:"30"`
 		CompanyBasic string `json:"company_basic" yaml:"company_basic" default:"30"`
 		TradeDaily   string `json:"trade_daily" yaml:"trade_daily" default:"120"`
+      TradeCal     string `json:"trade_cal" yaml:"trade_cal" default:"trade_cal"`
 	}
-	Flag         models.DataFlag `json:"flag" yaml:"flag" default:"1"`
 	StockBasic   string          `json:"basic_stock" yaml:"basic_stock" default:"basic_stock"`
 	CompanyBasic string          `json:"basic_company" yaml:"basic_company" default:"basic_company"`
+	TradeCal     string          `json:"basic_trade_cal" yaml:"basic_trade_cal" default:"basic_trade_cal"`
+	NameChangeHistory     string  `json:"basic_name_his" yaml:"basic_name_his" default:"basic_name_his"`
 }
 
 type Storage struct {

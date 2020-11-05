@@ -163,6 +163,37 @@ func (c *TsClient) GetTradeCalender(params *map[string]string) (items *[][]inter
 		log.Printf("ERROR: params must be valid!")
 		return
    }
+	data, err := c.c.TradeCal(*params, models.TradeCalendarFieldSymbol)
+	if err == nil {
+		log.Printf("%T %s %d msg:%v fields:%v size:%d\n", data, data.RequestID, data.Code, data.Msg, data.Data.Fields, len(data.Data.Items))
+		return &data.Data.Items
+	}
+   return nil
+}
+
+func (c *TsClient) GetNameChangeHistory(params *map[string]string) (items *[][]interface{}) {
+   if params == nil {
+		log.Printf("ERROR: params must be valid!")
+		return
+   }
+	data, err := c.c.NameChange(*params, models.NameChangeFieldSymbol)
+	if err == nil {
+		log.Printf("%T %s %d msg:%v fields:%v size:%d\n", data, data.RequestID, data.Code, data.Msg, data.Data.Fields, len(data.Data.Items))
+		return &data.Data.Items
+	}
+   return nil
+}
+
+func (c *TsClient) GetHsConst(params *map[string]string) (items *[][]interface{}) {
+   if params == nil {
+		log.Printf("ERROR: params must be valid!")
+		return
+   }
+	data, err := c.c.HSConst(*params, models.HsConstFieldSymbol)
+	if err == nil {
+		log.Printf("%T %s %d msg:%v fields:%v size:%d\n", data, data.RequestID, data.Code, data.Msg, data.Data.Fields, len(data.Data.Items))
+		return &data.Data.Items
+	}
    return nil
 }
 
